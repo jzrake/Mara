@@ -202,8 +202,3 @@ local function plot(P, gp, title)
       end
    end
 end
-
---require 'gnuplot_t'
---local gp1 = gnuplot_t.new()
---plot(P_plm , gp1, "plm")
---plot(P_weno, gp1, "weno")

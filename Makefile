@@ -10,7 +10,7 @@ $(MARA_A) : FORCE
 	@make -C src
 
 $(MARA_E) : $(MARA_A)
-	$(CXX) -o $@ -Llib -lmara -llua -llunum $(CLIBS)
+	$(CXX) -o $@ -Llib -lmara -llua -llunum $(CLIBS) $(HDF5_L) $(FFTW_L)
 
 clean : 
 	@make -C src clean
