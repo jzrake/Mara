@@ -1,0 +1,70 @@
+#!/bin/bash
+
+
+if [ $# -ne 4 ]; then
+    echo "setup use_lua use_lunum use_gl cc"
+    exit
+fi
+
+
+serve="http://zrake.webfactional.com/media"
+
+lua="lua-5.2.0"
+lunum="lunum-0.5.1"
+glfw="glfw-2.7.2"
+
+use_lua=$1
+use_lunum=$2
+use_glfw=$3
+cc=$4
+
+if [ $(uname) == "Darwin" ]; then
+    archlua="macosx"
+    archglf="cocoa"
+fi
+if [ $(uname) == "Linux" ]; then
+    archlua="linux"
+    archglf="x11"
+fi
+
+
+base=$(pwd)
+lib=${base}/"lib"
+bin=${base}/"bin"
+include=${base}/"include"
+
+rm -rf ${lib}
+rm -rf ${bin}
+rm -rf ${include}
+
+mkdir -p ${lib}
+mkdir -p ${bin}
+mkdir -p ${include}
+
+
+if $use_lua; then
+    echo "Downloading and installing Lua..."
+    wget ${serve}/${lua}.tar.gz
+    tar xvf ${lua}.tar.gz
+    make -C ${lua} ${archlua} install CC=${cc} INSTALL_TOP=${base}
+    cp src/*.lua lib/lua/5.2
+    rm -rf share man ${lua} ${lua}.tar.gz
+fi
+
+if $use_lunum; then
+    echo "Downloading and installing Lunum..."
+    wget ${serve}/${lunum}.tar.gz
+    tar xvf ${lunum}.tar.gz
+    make -C ${lunum} install CC=${cc} LUA_HOME=${base} INSTALL_TOP=${base}
+    rm -r ${lunum} ${lunum}.tar.gz
+fi
+
+if $use_glfw; then
+    echo "Downloading and installing glfw..."
+    wget ${serve}/${glfw}.tar.gz
+    tar xvf ${glfw}.tar.gz
+    make -C ${glfw} ${archglf} CC=${cc}
+    cp -r ${glfw}/lib/${archglf}/libglfw* ${lib}
+    cp -r ${glfw}/include/* ${include}
+    rm -r ${glfw} ${glfw}.tar.gz
+fi
