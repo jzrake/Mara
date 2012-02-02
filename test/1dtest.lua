@@ -192,13 +192,6 @@ local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
 RunSimulation(Status, RunArgs.tmax)
 local P_weno = get_prim()
 
-local function plot(P, gp, title)
-   for k,v in pairs(P) do
-      if k=="rho" or k=="pre" or k=="vx" then
-	 gp {
-	    f = lunar.table(v),
-	    post = string.format("with points title '%s-%s'", k, title),
-	 }
-      end
-   end
-end
+
+util.plot{weno=P_weno.rho, plm=P_plm.rho}
+util.plot{weno=P_weno.vz, plm=P_plm.vz}
