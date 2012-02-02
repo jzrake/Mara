@@ -1,9 +1,9 @@
 
 
-local Nx = 10
+local Nx = 100
 local Ny = 240
 
-local x = 0.04 * lunum.range(Nx) * math.pi
+local x = 0.08 * lunum.range(Nx) * math.pi
 local y = 0.04 * lunum.range(Ny) * math.pi
 
 local A = lunum.zeros{Nx,Ny}
