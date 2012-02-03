@@ -3,6 +3,8 @@
 
 function RunSimulation(CFL, EndTime)
 
+   visual.open_window()
+
    local dt = 0.0
    local Iteration = 0
    local CurrentTime = 0.0
@@ -15,10 +17,12 @@ function RunSimulation(CFL, EndTime)
    while CurrentTime < EndTime do
 
       local prim = get_prim()
-      local ppmname = string.format("images/output-%04d.ppm", Iteration)
-      write_ppm(ppmname, prim["rho"])
-      os.execute("convert -rotate 90 " .. ppmname .. " " .. string.gsub(ppmname, ".ppm", ".png"))
-      os.execute("rm " .. ppmname)
+      visual.draw_texture(prim.rho)
+
+--      local ppmname = string.format("images/output-%04d.ppm", Iteration)
+--      write_ppm(ppmname, prim["rho"])
+--      os.execute("convert -rotate 90 " .. ppmname .. " " .. string.gsub(ppmname, ".ppm", ".png"))
+--      os.execute("rm " .. ppmname)
 
       local kzps = advance(dt)
 
@@ -31,7 +35,9 @@ function RunSimulation(CFL, EndTime)
       CurrentTime = CurrentTime + dt
       Iteration = Iteration + 1
 
+      collectgarbage()
    end
+
    print(string.format("run took %3.2f seconds", os.clock() - start))
    return get_prim()
 end
@@ -75,7 +81,7 @@ end
 
 
 --set_visual()
-set_domain({-0.5, -0.5}, {0.5, 0.5}, {256, 256}, 5, 3)
+set_domain({-0.5, -0.5}, {0.5, 0.5}, {128, 128}, 5, 3)
 set_fluid("euler")
 set_eos("gamma-law", 1.4)
 --set_boundary("reflect2d", 2, 3)

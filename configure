@@ -69,6 +69,20 @@ HDF5_I = -I$(HDF5_HOME)/include
 
 FFTW_L = -L$(FFTW_HOME)/lib %(fftwlibs)s
 FFTW_I = -I$(FFTW_HOME)/include
+
+
+ifeq ($(USE_GLFW), True)
+
+ifeq ($(shell uname), Linux)
+GL_L = -lXrandr -lX11 -lGLU -lGL -lglfw
+endif
+
+ifeq ($(shell uname), Darwin)
+GL_L = -framework OpenGL -framework Cocoa -lglfw
+endif
+
+endif
+
 # ------------------------------------------------------------------------------
 """
 
