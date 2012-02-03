@@ -6,24 +6,50 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 10000
-local verbose = false
-local start = 
+local Nsamp = 0
+local Nzone = 15
+local verbose = true
 
-set_domain({0,0,0}, {1,1,1}, {16,16,16}, 8, 2)
 
-init_prim(function(x,y,z) 
-	     local r = (x^2 +y^2 + z^2)^0.5	     
-	     return {1,1, 0,0,0, x/r, y/r, z/r}
-	  end)
+local function TestSamplingNd(dims)
 
-local start = os.clock()
+   if     dims == 1 then
+      set_domain({0}, {1}, {Nzone}, 8, 2)
 
-for i=0,Nsamp do
-   local x, y, z =  math.random(), math.random(), math.random()
-   local P = prim_at_point{x,y,z}
-   if verbose then print(lunum.array{x,y,z}, P) end
+   elseif dims == 2 then
+      set_domain({0,0}, {1,1}, {Nzone,Nzone}, 8, 2)
+
+   elseif dims == 3 then
+      set_domain({0,0,0}, {1,1,1}, {Nzone,Nzone,Nzone}, 8, 2)
+   end
+
+   local coords = { }
+   init_prim(function(x,y,z)
+		table.insert(coords, lunum.array({x,y,z}))
+		if (x == 0.5 and y == 0.5) then return {1,1, 0,0,0, 0,0,0}
+		else
+		   return {1,1, 0,0,0, x,y,z}
+		end
+	     end)
+
+   visual.draw_texture(get_prim().Bx)
+
+   local start = os.clock()
+
+   for i=0,Nsamp do
+      local x, y, z =  math.random(), math.random(), math.random()
+      local P = prim_at_point{x,y,z}
+      if verbose then print(lunum.array{x,y,z}, P) end
+   end
+   for k,v in pairs(coords) do
+      local P = prim_at_point(v)
+      if verbose then print(v,P) end
+   end
+
+   print(string.format("took %d samples in %f seconds",
+		       Nsamp, os.clock() - start))
 end
 
-print(string.format("took %d samples in %f seconds",
-		    Nsamp, os.clock() - start))
+set_fluid("rmhd")
+visual.open_window()
+TestSamplingNd(2)
