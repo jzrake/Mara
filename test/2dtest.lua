@@ -18,6 +18,7 @@ function RunSimulation(CFL, EndTime)
 
       local prim = get_prim()
       visual.draw_texture(prim.rho)
+
 --      local ppmname = string.format("images/output-%04d.ppm", Iteration)
 --      write_ppm(ppmname, prim["rho"])
 --      os.execute("convert -rotate 90 " .. ppmname .. " " .. string.gsub(ppmname, ".ppm", ".png"))
