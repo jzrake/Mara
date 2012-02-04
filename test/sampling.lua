@@ -73,7 +73,6 @@ local function TestSamplingNd(dims, mode, verbose)
       for i,j in Bx:indices() do
 	 local x = (i + 0.5) / (2*Nzone)
 	 local y = (j + 0.5) / (2*Nzone)
-	 print(x,y)
 	 Bx[{i,j}] = prim_at_point{x,y}[6]
       end
 
