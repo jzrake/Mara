@@ -9,6 +9,7 @@ local RunArgs = {
    id      = "test",
    CFL     = 0.8,
    tmax    = 0.4,
+   noplot  = false
 }
 
 
@@ -192,6 +193,7 @@ local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
 RunSimulation(Status, RunArgs.tmax)
 local P_weno = get_prim()
 
-
-util.plot{weno=P_weno.rho, plm=P_plm.rho}
-util.plot{weno=P_weno.vz, plm=P_plm.vz}
+if noplot == '1' then
+   util.plot{weno=P_weno.rho, plm=P_plm.rho}
+   util.plot{weno=P_weno.vz, plm=P_plm.vz}
+end
