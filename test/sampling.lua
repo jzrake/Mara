@@ -6,7 +6,7 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 10000
+local Nsamp = 100
 local Nzone = 64
 
 
@@ -45,6 +45,7 @@ local function TestSamplingNd(dims, mode, verbose)
 	 local x, y, z =  math.random(), math.random(), math.random()
 	 local P = prim_at_point{x,y,z}
 	 if verbose then print(lunum.array{x,y,z}, P) end	
+	 collectgarbage()
       end
       
       print(string.format("took %d samples in %f seconds",
@@ -58,6 +59,7 @@ local function TestSamplingNd(dims, mode, verbose)
       for k,v in pairs(coords) do
 	 local P = prim_at_point(v)
 	 if verbose then print(v,P) end
+	 collectgarbage()
       end
 
       visual.open_window()
@@ -74,6 +76,7 @@ local function TestSamplingNd(dims, mode, verbose)
 	 local x = (i + 0.5) / (2*Nzone)
 	 local y = (j + 0.5) / (2*Nzone)
 	 Bx[{i,j}] = prim_at_point{x,y}[6]
+	 collectgarbage()
       end
 
       visual.open_window()
@@ -85,8 +88,8 @@ end
 set_fluid("rmhd")
 
 for i=0,100 do
-   TestSamplingNd(3, 'random', false)
+   TestSamplingNd(3, 'random', true)
 end
 
---TestSamplingNd(2, 'grid', false)
+--TestSamplingNd(3, 'grid', true)
 --TestSamplingNd(2, 'prolong', false)
