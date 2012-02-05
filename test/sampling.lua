@@ -6,8 +6,8 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 32000
-local Nzone = 16
+local Nsamp = 10000
+local Nzone = 64
 
 
 
@@ -27,7 +27,7 @@ local function TestSamplingNd(dims, mode, verbose)
    local coords = { } -- buffer the grid points sampled by init_prim
 
    init_prim(function(x,y,z)
-		table.insert(coords, lunum.array({x,y,z}))
+--		table.insert(coords, lunum.array({x,y,z}))
 		return {1,1, 0,0,0, x,y,z}
 	     end)
 
@@ -84,6 +84,9 @@ end
 
 set_fluid("rmhd")
 
---TestSamplingNd(3, 'random', false)
+for i=0,100 do
+   TestSamplingNd(3, 'random', false)
+end
+
 --TestSamplingNd(2, 'grid', false)
-TestSamplingNd(2, 'prolong', false)
+--TestSamplingNd(2, 'prolong', false)
