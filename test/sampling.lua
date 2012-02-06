@@ -6,8 +6,8 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 100000
-local Nzone = 64
+local Nsamp = 10
+local Nzone = 32
 
 
 local function TestSamplingInternal()
@@ -15,7 +15,21 @@ local function TestSamplingInternal()
    init_prim(function(x,y,z)
 		return {1,1, 0,0,0, x,y,z}
 	     end)
+   set_boundary("outflow")
+   boundary.ApplyBoundaries()
    local trun = test_sampling(Nsamp)
+   print(string.format("took %d samples in %f seconds", Nsamp, trun))
+end
+
+
+local function TestSamplingInternalMany()
+   set_domain({0,0,0}, {1,1,1}, {Nzone,Nzone,Nzone}, 8, 2)
+   init_prim(function(x,y,z)
+		return {1,1, 0,0,0, x,y,z}
+	     end)
+   set_boundary("outflow")
+   boundary.ApplyBoundaries()
+   local trun = test_sampling_many(Nsamp)
    print(string.format("took %d samples in %f seconds", Nsamp, trun))
 end
 
@@ -47,8 +61,13 @@ local function TestSamplingNd(dims, mode, verbose)
       -- ***********************************************************************
       -- Choose random points to be sampled throughout the domain
 
+      local r = { 0.792704, 0.983885, 0.148887 }
+      local r = { 0.792704, 0.970000, 0.148887 }
+      print(lunum.array(r), prim_at_point(r))
+      os.exit()
 
       local start = os.clock()
+      math.randomseed(12345)
 
       for i=0,Nsamp do
 	 local x, y, z =  math.random(), math.random(), math.random()
@@ -95,8 +114,9 @@ end
 
 
 set_fluid("rmhd")
-TestSamplingInternal()
+--TestSamplingInternal()
+--TestSamplingInternalMany()
 
---TestSamplingNd(3, 'random', false)
+TestSamplingNd(3, 'random', true)
 --TestSamplingNd(3, 'grid', true)
 --TestSamplingNd(2, 'prolong', false)
