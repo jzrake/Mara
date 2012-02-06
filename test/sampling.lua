@@ -6,9 +6,15 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 100
-local Nzone = 64
+local Nsamp = 10000
+local Nzone = 32
 
+
+local function TestSamplingInternal()
+   set_domain({0,0,0}, {1,1,1}, {Nzone,Nzone,Nzone}, 8, 2)
+   local trun = test_sampling(Nsamp)
+   print(string.format("took %d samples in %f seconds", Nsamp, trun))
+end
 
 
 local function TestSamplingNd(dims, mode, verbose)
@@ -86,10 +92,8 @@ end
 
 
 set_fluid("rmhd")
+TestSamplingInternal()
 
-for i=0,100 do
-   TestSamplingNd(3, 'random', true)
-end
-
+--TestSamplingNd(3, 'random', false)
 --TestSamplingNd(3, 'grid', true)
 --TestSamplingNd(2, 'prolong', false)
