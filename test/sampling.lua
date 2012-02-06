@@ -6,12 +6,15 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 10000
-local Nzone = 32
+local Nsamp = 100000
+local Nzone = 64
 
 
 local function TestSamplingInternal()
    set_domain({0,0,0}, {1,1,1}, {Nzone,Nzone,Nzone}, 8, 2)
+   init_prim(function(x,y,z)
+		return {1,1, 0,0,0, x,y,z}
+	     end)
    local trun = test_sampling(Nsamp)
    print(string.format("took %d samples in %f seconds", Nsamp, trun))
 end
