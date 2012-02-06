@@ -6,7 +6,7 @@
 --
 -- *****************************************************************************
 
-local Nsamp = 10
+local Nsamp = 10000
 local Nzone = 32
 
 
@@ -112,6 +112,6 @@ set_fluid("rmhd")
 TestSamplingInternal()
 TestSamplingInternalMany()
 
-TestSamplingNd(3, 'random', true)
-TestSamplingNd(2, 'grid', true)
-TestSamplingNd(2, 'prolong', false)
+--TestSamplingNd(3, 'random', true)
+--TestSamplingNd(2, 'grid', true)
+--TestSamplingNd(2, 'prolong', false)
