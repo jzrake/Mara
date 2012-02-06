@@ -1,17 +1,28 @@
 
 
-local Nzone = 32
+local Nzone = 16
 
 set_fluid("euler")
-set_domain({0,0,0}, {1,1,1}, {Nzone,Nzone,Nzone}, 5, 2)
-init_prim(function(x,y,z)
-	     return {1,1, 0.1,0.1,0.1, x,y,z}
-	  end)
+set_domain({ -0.5,-0.5,-0.5 }, { 0.5,0.5,0.5 }, {Nzone,Nzone,Nzone}, 5, 2)
 
-set_boundary("outflow")
-boundary.ApplyBoundaries()
+visual.open_window()
 
-local S = streamline({0.5,0.5,0.5}, 0.4, 1e-2)
-print(S)
-print(S:shape('array'))
+local Ntime = 100
 
+for i=0,Ntime do
+   local t = i / Ntime
+   local w = 0.1*math.sin(4*math.pi*t)
+
+   local function Pinit(x,y,z)
+      return {1,1, -10*y, 10*x, w}
+   end
+
+   init_prim(Pinit)
+
+   set_boundary("outflow")
+   boundary.ApplyBoundaries()
+   local S = streamline({0.1, 0.1, 0.0}, 6.6, 1e-2)
+
+   visual.draw_lines3d(S)
+   collectgarbage()
+end
