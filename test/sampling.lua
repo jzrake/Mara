@@ -61,11 +61,6 @@ local function TestSamplingNd(dims, mode, verbose)
       -- ***********************************************************************
       -- Choose random points to be sampled throughout the domain
 
-      local r = { 0.792704, 0.983885, 0.148887 }
-      local r = { 0.792704, 0.970000, 0.148887 }
-      print(lunum.array(r), prim_at_point(r))
-      os.exit()
-
       local start = os.clock()
       math.randomseed(12345)
 
@@ -91,7 +86,7 @@ local function TestSamplingNd(dims, mode, verbose)
       end
 
       visual.open_window()
-      visual.draw_texture(get_prim().Bx)
+      visual.draw_texture(get_prim().By)
 
 
    elseif mode == 'prolong' then
@@ -114,9 +109,9 @@ end
 
 
 set_fluid("rmhd")
---TestSamplingInternal()
---TestSamplingInternalMany()
+TestSamplingInternal()
+TestSamplingInternalMany()
 
 TestSamplingNd(3, 'random', true)
---TestSamplingNd(3, 'grid', true)
---TestSamplingNd(2, 'prolong', false)
+TestSamplingNd(2, 'grid', true)
+TestSamplingNd(2, 'prolong', false)
