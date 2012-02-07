@@ -5,7 +5,7 @@ local Nzone = 16
 set_fluid("euler")
 set_domain({ -0.5,-0.5,-0.5 }, { 0.5,0.5,0.5 }, {Nzone,Nzone,Nzone}, 5, 2)
 
-visual.open_window()
+visual.open_window({clear_color={0.7,0.8,0.9}})
 
 local Ntime = 100
 
