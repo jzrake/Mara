@@ -92,8 +92,16 @@ h5_close_file()
 
 h5_open_file(TestFile, "r+")
 
-local A = lunum.range(200):reshape{40,5}
+local A = lunum.range(200):reshape{40,5} * 2.0
 print(A:shape'array', A:dtype())
 h5_write_array("nd-array", A)
+
+h5_close_file()
+
+
+h5_open_file(TestFile, "r")
+
+local B = h5_read_array("nd-array")
+print(B:shape'array', B:dtype())
 
 h5_close_file()
