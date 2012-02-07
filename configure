@@ -11,10 +11,14 @@ def ConfigureMaraBuild():
     from os import getcwd, mkdir, system
     from shutil import copy
     from os.path import isfile, isdir
-    from conf.settings import SystemConfig
     from conf.templates import ConfigHeader, SystemMakefile
 
-    
+    if not isfile("conf/settings.lua"):
+        copy("conf/default_settings.py", "conf/settings.py")
+
+    from conf.settings import SystemConfig
+
+
     opts = { }
     opts.update(SystemConfig)
 
