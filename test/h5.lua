@@ -1,5 +1,6 @@
 
 
+
 local json = require('json')
 
 local TestFile = "unit-test.h5"
@@ -92,7 +93,7 @@ h5_close_file()
 
 h5_open_file(TestFile, "r+")
 
-local A = lunum.range(200):reshape{40,5} * 2.0
+local A = lunum.range(20):reshape{4,5} * 2.0
 print(A:shape'array', A:dtype())
 h5_write_array("nd-array", A)
 
@@ -103,5 +104,6 @@ h5_open_file(TestFile, "r")
 
 local B = h5_read_array("nd-array")
 print(B:shape'array', B:dtype())
+print(B:eq(A))
 
 h5_close_file()
