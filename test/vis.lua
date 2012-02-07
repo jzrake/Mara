@@ -45,8 +45,8 @@ local function TestLines3d()
       points[{i,1}] = y
       points[{i,2}] = z
    end
-   print(points)
-   visual.open_window()
+
+   visual.open_window({clear_color={0.2,0.8,0.2}, window_size={1024,768}})
    visual.draw_lines3d(points)
 
 end
@@ -54,4 +54,3 @@ end
 
 --TestTexture()
 TestLines3d()
-
