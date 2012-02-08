@@ -1,8 +1,9 @@
 
 
+
 local json = require('json')
 
-TestFile = "unit-test.h5"
+local TestFile = "unit-test.h5"
 
 h5_open_file(TestFile, "w")
 h5_open_group("group1", "w")
@@ -86,4 +87,23 @@ h5_close_file()
 h5_open_file(TestFile, "r+")
 print("number of data sets:", h5_get_nsets("prim"))
 print("dimension of data:", h5_get_ndims("prim/rho"))
+h5_close_file()
+
+
+
+h5_open_file(TestFile, "r+")
+
+local A = lunum.range(20):reshape{4,5} * 2.0
+print(A:shape'array', A:dtype())
+h5_write_array("nd-array", A)
+
+h5_close_file()
+
+
+h5_open_file(TestFile, "r")
+
+local B = h5_read_array("nd-array")
+print(B:shape'array', B:dtype())
+print(B:eq(A))
+
 h5_close_file()
