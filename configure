@@ -1,150 +1,49 @@
 #!/usr/bin/env python
 
 
-MaraDefaults = {
-    "cflags": "-Wall",
-    "clibs": "-lreadline -lncurses",
-    "cc": "cc",
-    "cxx": "c++",
-    "mpi": False,
-    "gl": False,
-    "hdf5": "/usr",
-    "fftw": "/usr",
-    }
 
 
-ConfigHeader = \
-"""
-#ifndef __MARA_CONFIG_HEADER__
-#define __MARA_CONFIG_HEADER__
-
-#define __MARA_BASE_VERSION "0.9"
-#define __MARA_HG_CHANGESET "0000000"
-
-#define __MARA_INSTALL_DIR "%(install_dir)s"
-#define __MARA_USE_MPI %(mpi)d
-#define __MARA_USE_HDF5 %(use_hdf5)d
-#define __MARA_USE_HDF5_PAR %(use_hdf5_par)d
-#define __MARA_USE_FFTW %(use_fftw)d
-#define __MARA_USE_GLFW %(use_glfw)d
-
-#ifdef __INTEL_COMPILER
-#define Mara_isinf_cxx(x) isinf(x)
-#define Mara_isnan_cxx(x) isnan(x)
-#else
-#define Mara_isinf_cxx(x) std::isinf(x)
-#define Mara_isnan_cxx(x) std::isnan(x)
-#endif // __INTEL_COMPILER
-
-#endif // __MARA_CONFIG_HEADER__
-"""
 
 
-SystemMakefile = \
-"""
-# ------------------------------------------------------------------------------
-#
-#                        Mara Astrophysical gasdynamics code
-#
-#                          System-specific build macros
-#
-# ------------------------------------------------------------------------------
 
-HDF5_HOME = %(hdf5)s
-FFTW_HOME = %(fftw)s
-
-USE_GLFW = %(use_glfw)s
-USE_FFTW = %(use_fftw)s
-
-AR = ar rcu
-
-CC = %(cc)s
-CXX = %(cxx)s
-
-CFLAGS = %(cflags)s
-CLIBS = %(clibs)s
-
-HDF5_L = -L$(HDF5_HOME)/lib %(hdf5libs)s
-HDF5_I = -I$(HDF5_HOME)/include
-
-FFTW_L = -L$(FFTW_HOME)/lib %(fftwlibs)s
-FFTW_I = -I$(FFTW_HOME)/include
-
-
-ifeq ($(USE_GLFW), True)
-
-ifeq ($(shell uname), Linux)
-GL_L = -lXrandr -lX11 -lGLU -lGL -lglfw
-endif
-
-ifeq ($(shell uname), Darwin)
-GL_L = -framework OpenGL -framework Cocoa -lglfw
-endif
-
-endif
-
-# ------------------------------------------------------------------------------
-"""
-
-
-# This is effectively the main program
-# ------------------------------------------------------------------------------
 def ConfigureMaraBuild():
-    """
-    Configuration script for the MARA code.
-    """
-    from sys import argv
-    from os import listdir, getcwd, mkdir, system
+
+    from os import getcwd, mkdir, system
     from shutil import copy
-    from os.path import abspath, splitext, isfile, isdir
-    from pickle import dump, load
-    from optparse import OptionParser
+    from os.path import isfile, isdir
+    from conf.templates import ConfigHeader, SystemMakefile
 
-    usage = "%prog [options]"
-    description = "*** MARA Astrophysical Relativistic MHD Code ***"
-    parser = OptionParser(usage=usage, description=description)
+    if not isfile("conf/settings.lua"):
+        copy("conf/default_settings.py", "conf/settings.py")
 
-    if isfile("conf/configure.last"):
-        MaraDefaults.update(load(open("conf/configure.last", "r")))
+    from conf.settings import SystemConfig
 
-    SystemConfig = MaraDefaults
-    sc = SystemConfig
 
-    for k,v in MaraDefaults.items():
-        if type(v) == str:
-            parser.add_option("--"+k, default=v, metavar=v, action="store")
-        else:
-            parser.add_option("--"+k, default=v, metavar=v, action="store_true")
+    opts = { }
+    opts.update(SystemConfig)
 
-    opts, args = parser.parse_args()
     extra = { 'hdf5libs': '-lz -lhdf5',
               'fftwlibs': '-lfftw',
               'glfwlibs': '',
               }
 
-    extra['use_hdf5']     = isfile("%s/include/hdf5.h" % opts.hdf5)
-    extra['use_hdf5_par'] = isfile("%s/bin/h5pcc" % opts.hdf5)
-    extra['use_fftw']     = isfile("%s/include/fftw.h" % opts.fftw)
-    extra['use_glfw']     = opts.gl
+    extra['use_hdf5']     = isfile("%s/include/hdf5.h" % opts["hdf5"])
+    extra['use_hdf5_par'] = isfile("%s/bin/h5pcc" % opts["hdf5"])
+    extra['use_fftw']     = isfile("%s/include/fftw.h" % opts["fftw"])
+    extra['use_glfw']     = opts["gl"]
 
     if not extra['use_hdf5'] : extra['hdf5libs'] = ""
     if not extra['use_fftw'] : extra['fftwlibs'] = ""
     if not extra['use_glfw'] : extra['glfwlibs'] = ""
 
-    opts.install_dir = getcwd()
+    opts["install_dir"] = getcwd()
+    SystemConfig.update(opts)
 
-    # Dump the most recent options to the default file for convenient
-    # reconfigures.
-    # --------------------------------------------------------------------------
-    SystemConfig.update(opts.__dict__)
-
-    try: mkdir("conf")
-    except: pass
 
     print "\nConfiguring Mara with the following options:\n"
     print "\n".join(sorted(["%-16s = %s" % (a,b) for a,b in SystemConfig.items()]))+"\n"
 
-    dump(SystemConfig, open("conf/configure.last", "w"))
+
 
     SysMakefile = open("conf/mara.conf", "w")
     SysMakefile.write(SystemMakefile % dict(SystemConfig.items() + extra.items()))
@@ -156,8 +55,9 @@ def ConfigureMaraBuild():
         copy("conf/host.default.lua", "conf/host.lua")
 
     if not isdir("lib") or not isdir("bin") or not isdir("include"):
-        cmd = "conf/setup true true %s %s" % ("true" if opts.gl else "false", opts.cc)
+        cmd = "conf/setup true true %s %s" % ("true" if opts["gl"] else "false", opts["cc"])
         system(cmd)
+
 
 
 if __name__ == "__main__":

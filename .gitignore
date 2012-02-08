@@ -22,5 +22,6 @@ data
 conf/mara.conf
 conf/host.lua
 conf/configure.last
-
+conf/settings.py
+conf/*.pyc
 
