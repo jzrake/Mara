@@ -107,3 +107,11 @@ print(B:shape'array', B:dtype())
 print(B:eq(A))
 
 h5_close_file()
+
+
+
+h5_open_file(TestFile, "r")
+for k,v in pairs(h5_get_setnames(".")) do
+   print(v)
+end
+h5_close_file()
