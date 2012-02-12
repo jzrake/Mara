@@ -12,6 +12,7 @@ def ConfigureMaraBuild():
     from shutil import copy
     from os.path import isfile, isdir
     from conf.templates import ConfigHeader, SystemMakefile
+    from optparse import OptionParser
 
     if not isfile("conf/settings.py"):
         copy("conf/default_settings.py", "conf/settings.py")
@@ -19,8 +20,19 @@ def ConfigureMaraBuild():
     from conf.settings import SystemConfig
 
 
-    opts = { }
-    opts.update(SystemConfig)
+    usage = "%prog [options]"
+    description = "*** MARA Astrophysical Relativistic MHD Code ***"
+    parser = OptionParser(usage=usage, description=description)
+
+
+    for k,v in SystemConfig.items():
+        if type(v) == str:
+            parser.add_option("--"+k, default=v, metavar=v, action="store")
+        else:
+            parser.add_option("--"+k, default=v, metavar=v, action="store_true")
+
+    opts1, args = parser.parse_args()
+    opts = opts1.__dict__
 
     extra = { 'hdf5libs': '-lz -lhdf5',
               'fftwlibs': '-lfftw',
@@ -53,10 +65,6 @@ def ConfigureMaraBuild():
 
     if not isfile("conf/host.lua"):
         copy("conf/host.default.lua", "conf/host.lua")
-
-    if not isdir("lib") or not isdir("bin") or not isdir("include"):
-        cmd = "conf/setup true true %s %s" % ("true" if opts["gl"] else "false", opts["cc"])
-        system(cmd)
 
 
 

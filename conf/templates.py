@@ -59,16 +59,17 @@ FFTW_L = -L$(FFTW_HOME)/lib %(fftwlibs)s
 FFTW_I = -I$(FFTW_HOME)/include
 
 
-ifeq ($(USE_GLFW), True)
 
 ifeq ($(shell uname), Linux)
-GL_L = -lXrandr -lX11 -lGLU -lGL -lglfw
+ARCH_LUA  = linum
+ARCH_GLFW = x11
+GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw
 endif
 
 ifeq ($(shell uname), Darwin)
-GL_L = -framework OpenGL -framework Cocoa -lglfw
-endif
-
+ARCH_LUA  = macosx
+ARCH_GLFW = cocoa
+GL_L      = -framework OpenGL -framework Cocoa -lglfw
 endif
 
 # ------------------------------------------------------------------------------
