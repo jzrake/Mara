@@ -37,7 +37,7 @@ lunum  :  $(LUNUM_A)
 glfw   :  $(GLFW_A)
 
 
-$(MARA_A) :
+$(MARA_A) : FORCE
 	@make -C src
 
 $(LUNUM_A) :
@@ -76,3 +76,4 @@ clean :
 realclean : clean
 	@rm -rf bin lib include
 
+FORCE :
