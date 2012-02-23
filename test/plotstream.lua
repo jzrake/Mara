@@ -1,7 +1,4 @@
 
-
-
-
 h5_open_file(cmdline.args[1], "r")
 
 visual.open_window()
