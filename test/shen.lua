@@ -13,5 +13,3 @@ end
 
 set_eos("shen", tab)
 test_shen()
-
-
