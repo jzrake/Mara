@@ -24,7 +24,7 @@ SERVE_SRC    = http://zrake.webfactional.com/media
 # Mara executable
 # ------------------------------------------------------------------------------
 $(MARA_E) : $(LUA_A) $(LUNUM_A) $(GLFW_A) $(MARA_A)
-	$(CXX) -o $@ -Llib -lmara -llua -llunum $(CLIBS) $(HDF5_L) $(FFTW_L) $(GL_L)
+	$(CXX) -o $@ -Llib -lmara -llunum $(CLIBS) $(LUA_A) $(HDF5_L) $(FFTW_L) $(GL_L)
 
 
 

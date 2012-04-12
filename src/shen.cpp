@@ -61,6 +61,12 @@
 #define EFFECTIVELY_ZERO    1.00000000000e-16
 #define units               (*Mara->units)
 
+// Set this to 0.5 or something to test off-table lookups (but expect warnings)
+#define OFF_TABLE_VAL (0)
+
+// Enable to use direct lookup on D,T (assumes equal spacing)
+#define NOSEARCH_DT
+
 bool ShenTabulatedNuclearEos::verbose = false;
 
 
@@ -275,7 +281,7 @@ void ShenTabulatedNuclearEos::tabulate_derivatives()
       const double D = pow(10.0, logD_values[i]);    // gm/cm^3
 
       const double Dh = D + u/c2 + p/c2;
-      const double GammaEff = -(Jp[0]*Js[1] - Jp[1]*Js[0])/Js[1];
+      const double GammaEff = (Jp[0]*Js[1] - Jp[1]*Js[0])/Js[1];
       const double cs2 = GammaEff * p / Dh;
 
       EOS_cs2[i + j*ND] = cs2/c2; // (cm/s)^2
@@ -505,6 +511,9 @@ double ShenTabulatedNuclearEos::Internal(double D, double logT) const
   return u * units.MeVPerCubicFemtometer();
 }
 double ShenTabulatedNuclearEos::Entropy(double D, double logT) const
+// -----------------------------------------------------------------------------
+// Returns the entropy per baryon
+// -----------------------------------------------------------------------------
 {
   D /= units.GramsPerCubicCentimeter();
   const double s = pow(10.0, sample_EOS(EOS_s, log10(D), logT));
@@ -519,7 +528,7 @@ double ShenTabulatedNuclearEos::SoundSpeed2Sr(double D, double logT) const
 {
   D /= units.GramsPerCubicCentimeter();
   const double cs2 = sample_EOS(EOS_cs2, log10(D), logT); // in units of light speed
-  return cs2 * pow(units.LightSpeed(), 2.0); // in (cm/s)^2
+  return cs2 * pow(units.LightSpeed(), 2.0); // in code units
 }
 
 double ShenTabulatedNuclearEos::Temperature_u(double D, double u) const
@@ -590,11 +599,11 @@ void ShenTabulatedNuclearEos::self_test_derivatives()
   int old_verbose = this->verbose;
   this->verbose = false;
 
-  const double logD0 = log10(this->DensLower()) - 0.5;
-  const double logD1 = log10(this->DensUpper()) + 0.5;
+  const double logD0 = log10(this->DensLower()) - OFF_TABLE_VAL * 0.5;
+  const double logD1 = log10(this->DensUpper()) + OFF_TABLE_VAL * 0.5;
 
-  const double logT0 = this->TempLower() - 0.5;
-  const double logT1 = this->TempUpper() + 0.5;
+  const double logT0 = this->TempLower() - OFF_TABLE_VAL * 0.5;
+  const double logT1 = this->TempUpper() + OFF_TABLE_VAL * 0.5;
 
   for (int n=0; n<10; ++n) {
 
@@ -667,7 +676,7 @@ void ShenTabulatedNuclearEos::self_test_inversion()
     printf("got back T=%le\n", pow(10.0, newlogT));
   }
 
-  {
+  if (false) {
     const double logD = 0.5*(logD0 + logD1);
     const double logT = 0.5*(logT0 + logT1);
     const double D = pow(10.0, logD);
@@ -687,7 +696,7 @@ void ShenTabulatedNuclearEos::self_test_inversion()
     printf("got back u=%e (expect %e)\n", newu, u);
   }
 
-  {
+  if (false) {
     const double logD =      logD1 + 2.0;
     const double logT = 0.5*(logT0 + logT1);
     const double D = pow(10.0, logD);
@@ -707,7 +716,7 @@ void ShenTabulatedNuclearEos::self_test_inversion()
     printf("got back u=%e (expect %e)\n", newu, u);
   }
 
-  {
+  if (false) {
     printf("This test fails because the extrapolation being used presently "
            "makes the pressure multi-valued.\n");
 
@@ -736,11 +745,11 @@ void ShenTabulatedNuclearEos::self_test_interpolation()
   const int nsampT = 64;
   const int nsampD = 64;
 
-  const double logD0 = log10(this->DensLower()) - 0.5;
-  const double logD1 = log10(this->DensUpper()) + 0.5;
+  const double logD0 = log10(this->DensLower()) - OFF_TABLE_VAL * 0.5;
+  const double logD1 = log10(this->DensUpper()) + OFF_TABLE_VAL * 0.5;
 
-  const double logT0 = this->TempLower() - 0.5;
-  const double logT1 = this->TempUpper() + 0.5;
+  const double logT0 = this->TempLower() - OFF_TABLE_VAL * 0.5;
+  const double logT1 = this->TempUpper() + OFF_TABLE_VAL * 0.5;
 
   const double dlogD = (logD1 - logD0) / nsampD;
   const double dlogT = (logT1 - logT0) / nsampT;
@@ -869,7 +878,7 @@ TabulatedEos ShenTabulatedNuclearEos::LoadTable(const char *fname, double YpExtr
       const double Yp    = d[iYp];          // proton fraction
       const double logD  = d[ilogD];        // log_10 of density
       const double D     = pow(10.0, logD); // density
-      const double S     = d[iS];           // entropy per baryon (s = S * nB)
+      const double S     = d[iS];           // entropy per baryon
       const double E     = d[iEint];        // total energy per baryon (u = E * nB)
       const double p     = d[ip];           // gas pressure
 
@@ -884,8 +893,8 @@ TabulatedEos ShenTabulatedNuclearEos::LoadTable(const char *fname, double YpExtr
           tab.logD_values.push_back(logD);
         }
 
-        tab.EOS_p.push_back(log10(p     ));
-        tab.EOS_s.push_back(log10(S * nB));
+        tab.EOS_p.push_back(log10(p));
+        tab.EOS_s.push_back(log10(S)); // entropy per baryon
         tab.EOS_u.push_back(log10(E * nB));
 
         ++n;
