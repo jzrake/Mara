@@ -210,50 +210,22 @@ local function CompareEosRmhd()
       set_riemann("hlld")
       set_advance("single")
       set_godunov("plm-muscl", 2.0, 0)
-      --set_eos("gamma-law", 1.4)
    end
 
-   local function do_units()
-      local LIGHT_SPEED = 2.99792458000e+10 -- cm/s
-
-      local Density = 1e13         -- gm/cm^3
-      local V       = LIGHT_SPEED  -- cm/s
-      local Length  = 1e2          -- cm
-      local Mass    = Density * Length^3.0
-      local Time    = Length / V
-      set_units(Length, Mass, Time)
-      units.Print()
-   end
-
-   h5_open_file("adeos.h5", "r")
-   local eos_terms = { }
-
-   for _,v in pairs({"pressure", "internal_energy",
-                     "sound_speed", "density", "temperature"}) do
-      eos_terms[v] = h5_read_array(v)
-   end
-   h5_close_file()
-   do_units()
-
-   local D = eos_terms["density"    ][':,0'] * units.GramsPerCubicCentimeter()
-   local T = eos_terms["temperature"]['0,:']
-
-   local p = eos_terms["pressure"] * units.MeVPerCubicFemtometer()
-   local u = eos_terms["internal_energy"] * units.MeVPerCubicFemtometer()
-   local c = eos_terms["sound_speed"]
-   set_eos("tabulated", {D=D, T=T, p=p, u=u, c=c})
+   local tabeos = require 'tabeos'
+   tabeos.MakeNeutronStarUnits()
+   tabeos.LoadMicroPh("adeos.h5")
 
    local ShocktubeEos = {
-      Pl = { 2.00, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
-      Pr = { 1.00, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
+      Pl = { 1.00, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
+      Pr = { 0.10, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
 
    local Status = InitSimulation(ShocktubeEos, setup)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
-
    if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre}
+      util.plot{rho=P.rho, pre=P.pre*1000}
    end
 
 end
