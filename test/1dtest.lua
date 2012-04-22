@@ -28,7 +28,7 @@ local function RunSimulation(Status, Howlong)
    while Status.CurrentTime - t0 < Howlong do
 
       if HandleErrors(Status, attempt) ~= 0 then
-	 return 1
+         return 1
       end
       attempt = attempt + 1
 
@@ -41,10 +41,10 @@ local function RunSimulation(Status, Howlong)
 
          print(string.format("%05d(%d): t=%5.4f dt=%5.4e %3.2fkz/s %3.2fus/(z*Nq)",
                              Status.Iteration, attempt-1, Status.CurrentTime, dt,
-			     kzps, 1e6/8/(1e3*kzps)))
-	 io.flush()
+                             kzps, 1e6/8/(1e3*kzps)))
+         io.flush()
 
-	 attempt = 0
+         attempt = 0
          Status.Timestep = get_timestep(RunArgs.CFL)
          Status.CurrentTime = Status.CurrentTime + Status.Timestep
          Status.Iteration = Status.Iteration + 1
@@ -114,9 +114,9 @@ local function InitSimulation(problem, setup)
 
    for k,v in pairs(cmdline.opts) do
       if type(RunArgs[k]) == 'number' then
-	 RunArgs[k] = tonumber(v)
+         RunArgs[k] = tonumber(v)
       else
-	 RunArgs[k] = v
+         RunArgs[k] = v
       end
    end
 
@@ -127,9 +127,9 @@ local function InitSimulation(problem, setup)
 
    local function pinit(x,y,z)
       if x < 0.5 then
-	 return problem.Pl
+         return problem.Pl
       else
-	 return problem.Pr
+         return problem.Pr
       end
    end
 
@@ -184,16 +184,85 @@ local function setup_rmhd()
    set_eos("gamma-law", 1.4)
 end
 
+local function CompareWenoEuler()
+   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_plm)
+   RunSimulation(Status, RunArgs.tmax)
+   local P_plm = get_prim()
 
-local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_plm)
-RunSimulation(Status, RunArgs.tmax)
-local P_plm = get_prim()
+   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
+   RunSimulation(Status, RunArgs.tmax)
+   local P_weno = get_prim()
 
-local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
-RunSimulation(Status, RunArgs.tmax)
-local P_weno = get_prim()
-
-if RunArgs.noplot ~= '1' then
-   util.plot{weno=P_weno.rho, plm=P_plm.rho}
-   util.plot{weno=P_weno.vz, plm=P_plm.vz}
+   if RunArgs.noplot ~= '1' then
+      util.plot{weno=P_weno.rho, plm=P_plm.rho}
+      util.plot{weno=P_weno.vz, plm=P_plm.vz}
+   end
 end
+
+local function CompareEosRmhd()
+
+   local function setup()
+      local N = RunArgs.N
+      set_domain({0.0}, {1.0}, {N}, 8, 2)
+      set_fluid("rmhd")
+      set_boundary("outflow")
+      set_riemann("hlld")
+      set_advance("single")
+      set_godunov("plm-muscl", 2.0, 0)
+      --set_eos("gamma-law", 1.4)
+   end
+
+   local function do_units()
+      local LIGHT_SPEED = 2.99792458000e+10 -- cm/s
+
+      local Density = 1e13         -- gm/cm^3
+      local V       = LIGHT_SPEED  -- cm/s
+      local Length  = 1e2          -- cm
+      local Mass    = Density * Length^3.0
+      local Time    = Length / V
+      set_units(Length, Mass, Time)
+      units.Print()
+   end
+
+   h5_open_file("adeos.h5", "r")
+   local eos_terms = { }
+
+   for _,v in pairs({"pressure", "internal_energy",
+                     "sound_speed", "density", "temperature"}) do
+      eos_terms[v] = h5_read_array(v)
+   end
+   do_units()
+
+   local T = eos_terms["temperature"][':,0']
+   local D = eos_terms["density"    ]['0,:'] * units.GramsPerCubicCentimeter()
+
+   local p = eos_terms["pressure"] * units.MeVPerCubicFemtometer()
+   local u = eos_terms["internal_energy"] * units.MeVPerCubicFemtometer()
+   local c = eos_terms["sound_speed"]
+   set_eos("tabulated", {D=D, T=T, p=p, u=u, c=c})
+
+   local ShocktubeEos = {
+      Pl = { 1.000, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
+      Pr = { 0.100, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
+
+   local Status = InitSimulation(ShocktubeEos, setup)
+   RunSimulation(Status, RunArgs.tmax)
+
+   local P = get_prim()
+
+--   local U = fluid.PrimToCons(ShocktubeEos.Pl)
+--   local P1 = fluid.ConsToPrim(U)
+--   print(lunum.array(ShocktubeEos.Pl), P1)
+--   os.exit()
+
+--   for i=0,RunArgs.N-1 do
+--      local Ti = eos.Temperature_p(P.rho[i], P.pre[i])
+--      print(P.rho[i], P.pre[i], Ti, eos.TemperatureMeV(P.rho[i], P.pre[i]))
+--   end
+
+   if RunArgs.noplot ~= '1' then
+      util.plot{rho=P.rho, pre=P.pre}
+   end
+end
+
+CompareEosRmhd()

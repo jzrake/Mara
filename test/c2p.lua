@@ -16,7 +16,7 @@ local log10  = math.log10
 local pow    = math.pow
 
 
-function random_state(Vel, Mag)
+local function random_state(Vel, Mag)
 
    local rho,pre,vx,vy,vz,Bx,By,Bz = 1,2,3,4,5,6,7,8
 
@@ -65,7 +65,7 @@ function run_test(ntrials, Vel, Mag, args)
    local times_av = {0,0,0,0}
    local npass    = {0,0,0,0}
 
-   for m=1, ntrials do
+   for m=1,ntrials do
 
       P = random_state(Vel, Mag)
       codes, iters, error, times = test_rmhd_c2p(P)
@@ -79,7 +79,7 @@ function run_test(ntrials, Vel, Mag, args)
                           codes[4], iters[4], error[4], times[4]))
       end
 
-      for i=1,4 do
+      for i=0,3 do
          if codes[i] == 0 then npass[i] = npass[i] + 1 end
          codes_av[i] = codes_av[i] + codes[i] / ntrials
          iters_av[i] = iters_av[i] + iters[i] / ntrials
@@ -89,7 +89,7 @@ function run_test(ntrials, Vel, Mag, args)
    end
 
    local pass = { }
-   for i=1, 4 do
+   for i=0,3 do
       pass[i] = npass[i]/ntrials
    end
 
@@ -137,10 +137,10 @@ for i=1, Nsamp_G do
 end
 
 
-json = require 'json'
+local json = require 'json'
 
-f = io.open("c2p_pass.json", "w")
+local f = io.open("c2p_pass.json", "w")
 f:write(json.encode(pass))
 
-f = io.open("c2p_time.json", "w")
+local f = io.open("c2p_time.json", "w")
 f:write(json.encode(time))
