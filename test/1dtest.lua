@@ -135,6 +135,7 @@ local function InitSimulation(problem, setup)
 
    setup()
    init_prim(pinit)
+   boundary.ApplyBoundaries()
 
    local Status = { }
 
@@ -231,10 +232,11 @@ local function CompareEosRmhd()
                      "sound_speed", "density", "temperature"}) do
       eos_terms[v] = h5_read_array(v)
    end
+   h5_close_file()
    do_units()
 
-   local T = eos_terms["temperature"][':,0']
-   local D = eos_terms["density"    ]['0,:'] * units.GramsPerCubicCentimeter()
+   local D = eos_terms["density"    ][':,0'] * units.GramsPerCubicCentimeter()
+   local T = eos_terms["temperature"]['0,:']
 
    local p = eos_terms["pressure"] * units.MeVPerCubicFemtometer()
    local u = eos_terms["internal_energy"] * units.MeVPerCubicFemtometer()
@@ -242,27 +244,18 @@ local function CompareEosRmhd()
    set_eos("tabulated", {D=D, T=T, p=p, u=u, c=c})
 
    local ShocktubeEos = {
-      Pl = { 1.000, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
-      Pr = { 0.100, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
+      Pl = { 2.00, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
+      Pr = { 1.00, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
 
    local Status = InitSimulation(ShocktubeEos, setup)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
 
---   local U = fluid.PrimToCons(ShocktubeEos.Pl)
---   local P1 = fluid.ConsToPrim(U)
---   print(lunum.array(ShocktubeEos.Pl), P1)
---   os.exit()
-
---   for i=0,RunArgs.N-1 do
---      local Ti = eos.Temperature_p(P.rho[i], P.pre[i])
---      print(P.rho[i], P.pre[i], Ti, eos.TemperatureMeV(P.rho[i], P.pre[i]))
---   end
-
    if RunArgs.noplot ~= '1' then
       util.plot{rho=P.rho, pre=P.pre}
    end
+
 end
 
 CompareEosRmhd()
