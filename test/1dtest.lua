@@ -9,8 +9,17 @@ local RunArgs = {
    id      = "test",
    CFL     = 0.8,
    tmax    = 0.4,
-   noplot  = false
+   noplot  = false,
+   eosfile = "none" -- tabeos.h5
 }
+
+for k,v in pairs(cmdline.opts) do
+   if type(RunArgs[k]) == 'number' then
+      RunArgs[k] = tonumber(v)
+   else
+      RunArgs[k] = v
+   end
+end
 
 
 local function HandleErrors(Status, attempt)
@@ -112,14 +121,6 @@ local Rmhd1dProblems = {
 
 local function InitSimulation(problem, setup)
 
-   for k,v in pairs(cmdline.opts) do
-      if type(RunArgs[k]) == 'number' then
-         RunArgs[k] = tonumber(v)
-      else
-         RunArgs[k] = v
-      end
-   end
-
    print("runtime arguments:")
    for k,v in pairs(RunArgs) do
       print(k,v)
@@ -212,13 +213,22 @@ local function CompareEosRmhd()
       set_godunov("plm-muscl", 2.0, 0)
    end
 
-   local tabeos = require 'tabeos'
-   tabeos.MakeNeutronStarUnits()
-   tabeos.LoadMicroPh("adeos.h5")
+   if RunArgs.eosfile ~= "none" then
+      local tabeos = require 'tabeos'
+      tabeos.MakeNeutronStarUnits()
+      tabeos.LoadMicroPh(RunArgs.eosfile)
+   end
+
+   local Dl = 2.0
+   local Dr = 1.0
+   local Tl = 8.0 -- MeV
+   local Tr = 2.0 -- MeV
+   local prel = eos.Pressure(Dl, Tl)
+   local prer = eos.Pressure(Dr, Tr)
 
    local ShocktubeEos = {
-      Pl = { 1.00, 1.000e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
-      Pr = { 0.10, 0.125e-3, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
+      Pl = { Dl, prel, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
+      Pr = { Dr, prer, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
 
    local Status = InitSimulation(ShocktubeEos, setup)
    RunSimulation(Status, RunArgs.tmax)
