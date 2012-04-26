@@ -42,7 +42,7 @@ def ConfigureMaraBuild():
     extra['use_hdf5']     = isfile("%s/include/hdf5.h" % opts["hdf5"])
     extra['use_hdf5_par'] = isfile("%s/bin/h5pcc" % opts["hdf5"])
     extra['use_fftw']     = isfile("%s/include/fftw.h" % opts["fftw"])
-    extra['use_glfw']     = opts["gl"]
+    extra['use_glfw']     = not opts["nogl"]
 
     if not extra['use_hdf5'] : extra['hdf5libs'] = ""
     if not extra['use_fftw'] : extra['fftwlibs'] = ""
