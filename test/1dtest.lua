@@ -3,7 +3,7 @@ local json = require 'json'
 local host = require 'host'
 local util = require 'util'
 
-
+local Quiet = true
 local RunArgs = {
    N       = 128,
    id      = "test",
@@ -48,10 +48,12 @@ local function RunSimulation(Status, Howlong)
          driving.Advance(dt)
          driving.Resample()
 
-         print(string.format("%05d(%d): t=%5.4f dt=%5.4e %3.2fkz/s %3.2fus/(z*Nq)",
-                             Status.Iteration, attempt-1, Status.CurrentTime, dt,
-                             kzps, 1e6/8/(1e3*kzps)))
-         io.flush()
+	 if not Quiet then
+	    print(string.format("%05d(%d): t=%5.4f dt=%5.4e %3.2fkz/s %3.2fus/(z*Nq)",
+				Status.Iteration, attempt-1, Status.CurrentTime, dt,
+				kzps, 1e6/8/(1e3*kzps)))
+	    io.flush()
+	 end
 
          attempt = 0
          Status.Timestep = get_timestep(RunArgs.CFL)
@@ -88,6 +90,29 @@ local Euler1dProblems = {
       Pl = { 1.0, 1.0, 0.0, 0.7, 0.2 },
       Pr = { 0.1, 1.0, 0.0, 0.7, 0.2 }
    },
+
+   IsentropicPulse = {
+      pinit = function(x,y,z)
+                 local n = 2
+                 local L = 1.0
+                 local K = 0.1
+                 local Gamma = 1.4
+                 local rho_ref = 1.0
+                 local pre_ref = K * rho_ref ^ Gamma
+                 local cs_ref = (Gamma * pre_ref / rho_ref)^0.5
+
+                 local function f(x)
+                    return math.sin(n*math.pi*x/L)^2
+                 end
+
+                 local rho = rho_ref * (1.0 + f(x))
+                 local pre = K * rho ^ Gamma
+                 local cs = (Gamma * pre/rho)^0.5
+                 local vx = 2 / (Gamma - 1) * (cs - cs_ref)
+                 return { rho, pre, vx, 0, 0 }
+              end,
+      entropy = 0.1 -- set equal to K above
+   }
 }
 
 local Rmhd1dProblems = {
@@ -119,18 +144,12 @@ local Rmhd1dProblems = {
    },
 }
 
-local function InitSimulation(problem, setup)
+local function InitSimulation(pinit, setup)
 
-   print("runtime arguments:")
-   for k,v in pairs(RunArgs) do
-      print(k,v)
-   end
-
-   local function pinit(x,y,z)
-      if x < 0.5 then
-         return problem.Pl
-      else
-         return problem.Pr
+   if not Quiet then
+      print("runtime arguments:")
+      for k,v in pairs(RunArgs) do
+	 print(k,v)
       end
    end
 
@@ -149,7 +168,7 @@ local function InitSimulation(problem, setup)
    os.execute(string.format("mkdir -p %s", datadir))
    os.execute(host.Filesystem(datadir))
 
-   print_mara()
+   if not Quiet then print_mara() end
    return Status
 end
 
@@ -180,7 +199,7 @@ local function setup_weno_riemann()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 3)
    set_fluid("euler")
-   set_boundary("outflow")
+   set_boundary("periodic")
    set_advance("rk3")
    set_riemann("hllc")
    set_godunov("weno-riemann")
@@ -208,19 +227,59 @@ local function setup_rmhd()
    set_eos("gamma-law", 1.4)
 end
 
-local function CompareWenoEuler()
-   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno_riemann)
-   RunSimulation(Status, RunArgs.tmax)
-   local P_plm = get_prim()
 
---   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
---   RunSimulation(Status, RunArgs.tmax)
---   local P_weno = get_prim()
+local function CompareWenoEuler()
+
+   local problem = Euler1dProblems.Shocktube1
+   local function pinit(x,y,z)
+      if x < 0.5 then
+         return problem.Pl
+      else
+         return problem.Pr
+      end
+   end
+
+   local Status = InitSimulation(pinit, setup_weno_riemann)
+   RunSimulation(Status, RunArgs.tmax)
+
+   local P_plm = get_prim()
 
    if RunArgs.noplot ~= '1' then
       util.plot{rho=P_plm.rho, pre=P_plm.pre}
---      util.plot{plm=P_plm.pre}
    end
+end
+
+local function IsentopicConvergenceRate()
+
+   local res_values = { 1.0, 2.0, 3.0, 4.0 }
+   local L1_values = { }
+   for run_num,logN in pairs(res_values) do
+      local function setup()
+	 set_domain({0.0}, {1.0}, {10^logN}, 5, 3)
+	 set_fluid("euler")
+	 set_boundary("periodic")
+	 set_advance("rk3")
+	 set_riemann("hllc")
+	 set_godunov("weno-riemann")
+	 set_eos("gamma-law", 1.4)
+      end
+      
+      local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit,
+				    setup)
+      RunSimulation(Status, RunArgs.tmax)
+      
+      local P = get_prim()
+      local S0 = Euler1dProblems.IsentropicPulse.entropy
+      local dS = P.pre / P.rho^1.4 - S0
+
+      local L1 = 0.0
+      for i=0,dS:size()-1 do
+	 L1 = L1 + math.abs(dS[i]) / 10^logN
+      end
+      L1_values[run_num] = math.log10(L1)
+      print("L1 = "..math.log10(L1))
+   end
+   util.plot{L1=lunum.array(L1_values)}
 end
 
 local function CompareEosRmhd()
@@ -252,7 +311,15 @@ local function CompareEosRmhd()
       Pl = { Dl, prel, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
       Pr = { Dr, prer, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
 
-   local Status = InitSimulation(ShocktubeEos, setup)
+   local function pinit(x,y,z)
+      if x < 0.5 then
+         return ShocktubeEos.Pl
+      else
+         return ShocktubeEos.Pr
+      end
+   end
+
+   local Status = InitSimulation(pinit, setup)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
@@ -263,4 +330,5 @@ local function CompareEosRmhd()
 end
 
 --CompareEosRmhd()
-CompareWenoEuler()
+--CompareWenoEuler()
+IsentopicConvergenceRate()
