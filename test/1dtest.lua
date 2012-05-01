@@ -154,7 +154,7 @@ local function InitSimulation(problem, setup)
 end
 
 
-local function setup_plm()
+local function setup_plm1()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 2)
    set_fluid("euler")
@@ -162,6 +162,28 @@ local function setup_plm()
    set_advance("single")
    set_riemann("hllc")
    set_godunov("plm-muscl", 2.0, 0)
+   set_eos("gamma-law", 1.4)
+end
+
+local function setup_plm2()
+   local N = RunArgs.N
+   set_domain({0.0}, {1.0}, {N}, 5, 2)
+   set_fluid("euler")
+   set_boundary("outflow")
+   set_advance("single")
+   set_riemann("hllc")
+   set_godunov("plm-split", 2.0, 0)
+   set_eos("gamma-law", 1.4)
+end
+
+local function setup_weno_riemann()
+   local N = RunArgs.N
+   set_domain({0.0}, {1.0}, {N}, 5, 3)
+   set_fluid("euler")
+   set_boundary("outflow")
+   set_advance("rk3")
+   set_riemann("hllc")
+   set_godunov("weno-riemann")
    set_eos("gamma-law", 1.4)
 end
 
@@ -187,17 +209,17 @@ local function setup_rmhd()
 end
 
 local function CompareWenoEuler()
-   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_plm)
+   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno_riemann)
    RunSimulation(Status, RunArgs.tmax)
    local P_plm = get_prim()
 
-   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
-   RunSimulation(Status, RunArgs.tmax)
-   local P_weno = get_prim()
+--   local Status = InitSimulation(Euler1dProblems.Shocktube1, setup_weno)
+--   RunSimulation(Status, RunArgs.tmax)
+--   local P_weno = get_prim()
 
    if RunArgs.noplot ~= '1' then
-      util.plot{weno=P_weno.rho, plm=P_plm.rho}
-      util.plot{weno=P_weno.vz, plm=P_plm.vz}
+      util.plot{rho=P_plm.rho, pre=P_plm.pre}
+--      util.plot{plm=P_plm.pre}
    end
 end
 
@@ -240,4 +262,5 @@ local function CompareEosRmhd()
 
 end
 
-CompareEosRmhd()
+--CompareEosRmhd()
+CompareWenoEuler()
