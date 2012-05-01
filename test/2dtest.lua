@@ -81,7 +81,7 @@ end
 
 
 --set_visual()
-set_domain({-0.5, -0.5}, {0.5, 0.5}, {128, 128}, 5, 3)
+set_domain({-0.5, -0.5}, {0.5, 0.5}, {64, 64}, 5, 3)
 set_fluid("euler")
 set_eos("gamma-law", 1.4)
 --set_boundary("reflect2d", 2, 3)
@@ -89,7 +89,9 @@ set_boundary("outflow", 2, 3)
 set_riemann("hllc")
 set_advance("single")
 
---set_godunov("weno-split")
+--set_advance("rk3")
+--set_godunov("weno-riemann")
 set_godunov("plm-muscl", 2.0, 0)
-RunSimulation(0.6, 1.0)
+--set_godunov("plm-split", 2.0, 0)
+RunSimulation(0.7, 6.0)
 
