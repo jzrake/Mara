@@ -258,12 +258,14 @@ local function IsentopicConvergenceRate()
 	 set_domain({0.0}, {1.0}, {10^logN}, 5, 3)
 	 set_fluid("euler")
 	 set_boundary("periodic")
-	 set_advance("rk3")
 	 set_riemann("hllc")
-	 set_godunov("weno-riemann")
+	 set_advance("single")
+	 set_godunov("plm-muscl", 2.0, 0)
+--	 set_advance("rk3")
+--	 set_godunov("weno-riemann")
 	 set_eos("gamma-law", 1.4)
       end
-      
+
       local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit,
 				    setup)
       RunSimulation(Status, RunArgs.tmax)
