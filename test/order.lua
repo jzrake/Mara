@@ -24,13 +24,13 @@ local function IsentopicConvergenceRate()
 
    for run_num,N in pairs(res_values) do
       local function setup()
-	 set_domain({0.0}, {1.0}, {N}, 5, 3)
+	 set_domain({0.0}, {1.0}, {N}, 5, 7)
 	 set_fluid("euler")
 	 set_boundary("periodic")
 	 set_riemann("hllc")
 	 set_advance("single")
 	 set_godunov("plm-muscl", 2.0, 0)
---	 set_advance("rk3")
+--	 set_advance("rk4")
 --	 set_godunov("weno-riemann")
 	 set_eos("gamma-law", 1.4)
       end
