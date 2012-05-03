@@ -197,10 +197,10 @@ end
 
 local function setup_weno_riemann()
    local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 5, 3)
+   set_domain({0.0}, {1.0}, {N}, 5, 7)
    set_fluid("euler")
-   set_boundary("periodic")
-   set_advance("rk3")
+   set_boundary("outflow")
+   set_advance("rk4")
    set_riemann("hllc")
    set_godunov("weno-riemann")
    set_eos("gamma-law", 1.4)
@@ -321,5 +321,5 @@ local function CompareEosRmhd()
 end
 
 --CompareEosRmhd()
---CompareWenoEuler()
-IsentopicConvergenceRate()
+CompareWenoEuler()
+--IsentopicConvergenceRate()
