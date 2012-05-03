@@ -3,7 +3,7 @@ local json = require 'json'
 local host = require 'host'
 local util = require 'util'
 
-local Quiet = true
+local Quiet = false
 local RunArgs = {
    N       = 128,
    id      = "test",
@@ -93,7 +93,7 @@ local Euler1dProblems = {
 
    IsentropicPulse = {
       pinit = function(x,y,z)
-                 local n = 2
+                 local n = 1
                  local L = 1.0
                  local K = 0.1
                  local Gamma = 1.4
@@ -251,37 +251,26 @@ end
 
 local function IsentopicConvergenceRate()
 
-   local res_values = { 1.0, 2.0, 3.0, 4.0 }
-   local L1_values = { }
-   for run_num,logN in pairs(res_values) do
-      local function setup()
-	 set_domain({0.0}, {1.0}, {10^logN}, 5, 3)
-	 set_fluid("euler")
-	 set_boundary("periodic")
-	 set_riemann("hllc")
-	 set_advance("single")
-	 set_godunov("plm-muscl", 2.0, 0)
---	 set_advance("rk3")
---	 set_godunov("weno-riemann")
-	 set_eos("gamma-law", 1.4)
-      end
-
-      local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit,
-				    setup)
-      RunSimulation(Status, RunArgs.tmax)
-      
-      local P = get_prim()
-      local S0 = Euler1dProblems.IsentropicPulse.entropy
-      local dS = P.pre / P.rho^1.4 - S0
-
-      local L1 = 0.0
-      for i=0,dS:size()-1 do
-	 L1 = L1 + math.abs(dS[i]) / 10^logN
-      end
-      L1_values[run_num] = math.log10(L1)
-      print("L1 = "..math.log10(L1))
+   local function setup()
+      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 3)
+      set_fluid("euler")
+      set_boundary("periodic")
+      set_riemann("hllc")
+--      set_advance("single")
+--      set_godunov("plm-muscl", 2.0, 0)
+      set_advance("rk3")
+      set_godunov("weno-riemann")
+      set_eos("gamma-law", 1.4)
    end
-   util.plot{L1=lunum.array(L1_values)}
+
+   local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit,
+				 setup)
+   RunSimulation(Status, RunArgs.tmax)
+      
+   local P = get_prim()
+   if RunArgs.noplot ~= '1' then
+      util.plot{rho=P.rho, pre=P.pre}
+   end
 end
 
 local function CompareEosRmhd()
