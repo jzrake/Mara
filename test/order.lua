@@ -18,8 +18,9 @@ util.parse_args(RunArgs)
 
 
 
-local function IsentopicConvergenceRate() local outf = io.open("isentropic.dat",
-   "w") local res_values = { 64, 128, 256, 512, 1024 }
+local function IsentopicConvergenceRate()
+   local outf = io.open("isentropic.dat", "w")
+   local res_values = { 64, 128, 256, 512, 1024 }
 
    for run_num,N in pairs(res_values) do
       local function setup()
