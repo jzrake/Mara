@@ -18,9 +18,8 @@ util.parse_args(RunArgs)
 
 
 
-local function IsentopicConvergenceRate()
-   local outf = io.open("isentropic.dat", "w")
-   local res_values = { 16, 32, 64, 128, 256, 512, 1024 }
+local function IsentopicConvergenceRate() local outf = io.open("isentropic.dat",
+   "w") local res_values = { 64, 128, 256, 512, 1024 }
 
    for run_num,N in pairs(res_values) do
       local function setup()
@@ -28,14 +27,16 @@ local function IsentopicConvergenceRate()
 	 set_fluid("euler")
 	 set_boundary("periodic")
 	 set_riemann("hllc")
-	 set_advance("single")
-	 set_godunov("plm-muscl", 2.0, 0)
---	 set_advance("rk4")
---	 set_godunov("weno-riemann")
+--	 set_advance("single")
+--	 set_godunov("plm-muscl", 2.0, 0)
+	 set_advance("rk4")
+	 set_godunov("weno-riemann")
+--	 set_godunov("weno-split")
 	 set_eos("gamma-law", 1.4)
       end
 
       local problem = tests.IsentropicPulse
+      problem.mode = 2
       util.run_simulation(problem:get_pinit(), setup, RunArgs)
       
       local P = get_prim()

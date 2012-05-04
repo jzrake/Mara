@@ -93,7 +93,7 @@ local Euler1dProblems = {
 
    IsentropicPulse = {
       pinit = function(x,y,z)
-                 local n = 1
+                 local n = 4
                  local L = 1.0
                  local K = 0.1
                  local Gamma = 1.4
@@ -260,6 +260,7 @@ local function IsentopicConvergenceRate()
 --      set_godunov("plm-muscl", 2.0, 0)
       set_advance("rk4")
       set_godunov("weno-riemann")
+--      set_godunov("weno-split")
       set_eos("gamma-law", 1.4)
    end
 
@@ -269,7 +270,14 @@ local function IsentopicConvergenceRate()
 
    local P = get_prim()
    if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre}
+      util.plot{rho=P.rho}
+   end
+
+   if false then
+      local fout = io.open("rho.dat", "w")
+      for i=0,RunArgs.N-1 do
+	 fout:write(P.rho[i].."\n")
+      end
    end
 end
 
@@ -321,5 +329,5 @@ local function CompareEosRmhd()
 end
 
 --CompareEosRmhd()
-CompareWenoEuler()
---IsentopicConvergenceRate()
+--CompareWenoEuler()
+IsentopicConvergenceRate()
