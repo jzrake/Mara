@@ -49,11 +49,14 @@ def prim_to_cons(P):
     U[nrg] = P[rho] * 0.5*(P[vx]*P[vx] + P[vy]*P[vy] + P[vz]*P[vz]) + P[pre]/gm1
     return U
 
-def max_wavespeed(P):
+def max_wavespeed(P, take_abs=True):
     cs = sound_speed(P)
     ap, am = P[vx] + cs, P[vx] - cs
-    return max(abs(ap), abs(am))
-
+    if take_abs:
+        return max(abs(ap), abs(am))
+    else:
+        return ap, am
+    
 def left_right_eigenvectors(P):
     U = prim_to_cons(P)
     gm = Gamma
@@ -97,8 +100,6 @@ DeesC2R = [ 0.3, 0.6, 0.1 ]
 
 def weno5(v, c, d):
     eps = 1e-16
-#    print v[0]
-#    exit()
     B = [(13.0/12.0)*(  v[ 2] - 2*v[ 3] +   v[ 4])**2 +
          ( 1.0/ 4.0)*(3*v[ 2] - 4*v[ 3] +   v[ 4])**2,
 
@@ -147,26 +148,50 @@ def get_weno_flux(Cons, Prim, Flux, Mlam, i):
     return np.dot(RR, f)
 
 
-def set_bc(A, Ng):
+def get_hll_flux(Cons, Prim, Flux, Mlam, i):
+    U, P, F = Cons, Prim, Flux
+
+    epl, eml = max_wavespeed(Prim[i  ], take_abs=False)
+    epr, emr = max_wavespeed(Prim[i+1], take_abs=False)
+
+    ap = max(epl, epr, 0.0)
+    am = min(eml, emr, 0.0)
+    return (ap*F[i] - am*F[i+1] + ap*am*(U[i+1] - U[i])) / (ap - am)
+
+
+def set_periodic_bc(A, Ng):
     Nx = A.shape[0] - 2*Ng
     A[:Ng] = A[Nx-1:Nx+Ng-1]
     A[-Ng:] = A[Ng+1:2*Ng+1]
 
 
-def dUdt(Cons, dx):
+def set_outflow_bc(A, Ng):
+    Nx = A.shape[0] - 2*Ng
+    A[:Ng] = A[Ng+1]
+    A[-Ng:] = A[-(Ng+1)]
+
+
+
+set_bc = set_outflow_bc
+get_flux = get_hll_flux
+
+
+def dUdt(Cons, Ng, dx):
+    set_bc(Cons, Ng)
+
     Prim = np.array([cons_to_prim(U) for U in Cons])
-    Mlam = np.array([max_wavespeed(P) for P in Prim])
     Flux = np.array([flux(P) for P in Prim])
+    Mlam = np.array([max_wavespeed(P) for P in Prim])
 
     Nx_tot = Cons.shape[0]
     L = np.zeros_like(Cons)
-    F_weno = np.zeros_like(Cons)
+    F_hat = np.zeros_like(Cons)
 
     for i in range(2,Nx_tot-3):
-        F_weno[i] = get_weno_flux(Cons, Prim, Flux, Mlam, i)
+        F_hat[i] = get_flux(Cons, Prim, Flux, Mlam, i)
 
     for i in range(1,Nx_tot):
-        L[i] = -(F_weno[i] - F_weno[i-1]) / dx
+        L[i] = -(F_hat[i] - F_hat[i-1]) / dx
 
     return L
 
@@ -183,21 +208,53 @@ def test_eigenvectors():
 
 
 def setup_1d_problem():
-    Nx = 100
-    Ng = 6
-    Prim = np.zeros((Nx + 2*Ng, 5))
+    Nx = 128
+    Ng = 3
+    CFL = 0.6
 
+    Prim = np.zeros((Nx + 2*Ng, 5))
     x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
-    Prim[Ng:-Ng,rho] = 1.0 + 3.2e-8 * np.sin(2*np.pi*x)
-    Prim[Ng:-Ng,pre] = 1.0
+
+
+    # Initial conditions for density wave
+    if False:
+        Prim[Ng:-Ng,rho] = 1.0 + 3.2e-8 * np.sin(2*np.pi*x)
+        Prim[Ng:-Ng,pre] = 1.0
+        Prim[Ng:-Ng,vx] = 1.0
+    else:
+        # Initial conditions for shocktube
+        Prim[Ng:-Ng,pre] = np.where(x < 0.5, 1.0, 0.125)
+        Prim[Ng:-Ng,rho] = np.where(x < 0.5, 1.0, 0.1)
+
+
     set_bc(Prim, Ng)
 
+
     Cons = np.array([prim_to_cons(P) for P in Prim])
-    Cons += 0.001 * dUdt(Cons, dx)
-    Dudt = dUdt(Cons, dx)
-    set_bc(Dudt, Ng)
+    Prim = np.array([cons_to_prim(U) for U in Cons])
+
+    dt = CFL * dx / np.array([max_wavespeed(P) for P in Prim]).max()
+    t = 0.0
+    tmax = 0.10
+
+    while t < tmax:
+        L1 = dt * dUdt(Cons, Ng, dx)
+        L2 = dt * dUdt(Cons + 0.5*L1, Ng, dx)
+        L3 = dt * dUdt(Cons + 0.5*L2, Ng, dx)
+        L4 = dt * dUdt(Cons + 1.0*L3, Ng, dx)
+
+        Cons += (1.0/6.0) * (L1 + 2.0*L2 + 2.0*L3 + L4)
+        #Cons += L1
+        t += dt
+
+        print "we did it! t=%3.2f" % t
+
+
     from matplotlib import pyplot as plt
-    plt.plot(Dudt[:,rho])#Prim[:,rho])
+
+    Prim = np.array([cons_to_prim(U) for U in Cons])
+    plt.plot(Prim[Ng:-Ng,rho], label=r"$\rho$")
+    plt.plot(Prim[Ng:-Ng,pre], label=r"$p$")
     plt.show()
 
 
