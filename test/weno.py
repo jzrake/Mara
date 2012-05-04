@@ -21,6 +21,7 @@ def sound_speed(P):
 
 def flux(P):
     F = np.zeros(5)
+    U = prim_to_cons(P)
     F[rho]  =  U[rho] * P[vx];
     F[nrg]  = (U[nrg] + P[pre])*P[vx]
     F[px]   =  U[px]  * P[vx] + P[pre]
@@ -96,14 +97,16 @@ DeesC2R = [ 0.3, 0.6, 0.1 ]
 
 def weno5(v, c, d):
     eps = 1e-16
-    B = [(13.0/12.0)*(  v[ 2] - 2*v[ 3] +   v[ 4], 2.0)**2 +
-         ( 1.0/ 4.0)*(3*v[ 2] - 4*v[ 3] +   v[ 4], 2.0)**2,
+#    print v[0]
+#    exit()
+    B = [(13.0/12.0)*(  v[ 2] - 2*v[ 3] +   v[ 4])**2 +
+         ( 1.0/ 4.0)*(3*v[ 2] - 4*v[ 3] +   v[ 4])**2,
 
-         (13.0/12.0)*(  v[ 1] - 2*v[ 2] +   v[ 3], 2.0)**2 +
-         ( 1.0/ 4.0)*(3*v[ 1] - 0*v[ 2] -   v[ 3], 2.0)**2,
+         (13.0/12.0)*(  v[ 1] - 2*v[ 2] +   v[ 3])**2 +
+         ( 1.0/ 4.0)*(3*v[ 1] - 0*v[ 2] -   v[ 3])**2,
 
-         (13.0/12.0)*(  v[ 0] - 2*v[ 1] +   v[ 2], 2.0)**2 +
-         ( 1.0/ 4.0)*(  v[ 0] - 4*v[ 1] + 3*v[ 2], 2.0)**2]
+         (13.0/12.0)*(  v[ 0] - 2*v[ 1] +   v[ 2])**2 +
+         ( 1.0/ 4.0)*(  v[ 0] - 4*v[ 1] + 3*v[ 2])**2]
 
     vs = [c[0][0]*v[ 2] + c[0][1]*v[ 3] + c[0][2]*v[4],
           c[1][0]*v[ 1] + c[1][1]*v[ 2] + c[1][2]*v[3],
@@ -124,32 +127,47 @@ def weno5(v, c, d):
 # matrices. The indices 0 ... 5 inclusively label the zones surrounding the
 # i+1/2 interface.
 
-def get_weno_flux(i):
-    LL, RR = left_right_eigenvectors(0.5*(P[i] + P[i+1]))
+def get_weno_flux(Cons, Prim, Flux, Mlam, i):
+    LL, RR = left_right_eigenvectors(0.5*(Prim[i] + Prim[i+1]))
 
     P = [Prim[i-2+j] for j in range(6)]
     U = [Cons[i-2+j] for j in range(6)]
     F = [Flux[i-2+j] for j in range(6)]
     A = [Mlam[i-2+j] for j in range(6)]
 
-    ml = max([A0, A1, A2, A3, A4, A5])
+    ml = max(A)
 
     Fp = [0.5*(F[j] + ml*U[j]) for j in range(6)]
     Fm = [0.5*(F[j] - ml*U[j]) for j in range(6)]
 
-    fp = [LL*Fp[j] for j in range(6)]
-    fm = [LL*Fm[j] for j in range(6)]
+    fp = [np.array(np.dot(LL, Fp[j]))[0] for j in range(6)]
+    fm = [np.array(np.dot(LL, Fm[j]))[0] for j in range(6)]
 
     f = weno5(fp[0:5], CeesC2R, DeesC2R) + weno5(fm[1:6], CeesC2L, DeesC2L)
-    return RR*f
+    return np.dot(RR, f)
 
 
-def dUdt():
-    L = np.zeros(Nx)
-    for i in range(Nx):
-        F_weno[i] = get_weno_flux(i)
-    for i in range(Nx):
-        L[i] = -(F_weno[i+1] - F_weno[i]) / dx
+def set_bc(A, Ng):
+    Nx = A.shape[0] - 2*Ng
+    A[:Ng] = A[Nx-1:Nx+Ng-1]
+    A[-Ng:] = A[Ng+1:2*Ng+1]
+
+
+def dUdt(Cons, dx):
+    Prim = np.array([cons_to_prim(U) for U in Cons])
+    Mlam = np.array([max_wavespeed(P) for P in Prim])
+    Flux = np.array([flux(P) for P in Prim])
+
+    Nx_tot = Cons.shape[0]
+    L = np.zeros_like(Cons)
+    F_weno = np.zeros_like(Cons)
+
+    for i in range(2,Nx_tot-3):
+        F_weno[i] = get_weno_flux(Cons, Prim, Flux, Mlam, i)
+
+    for i in range(1,Nx_tot):
+        L[i] = -(F_weno[i] - F_weno[i-1]) / dx
+
     return L
 
 
@@ -164,9 +182,29 @@ def test_eigenvectors():
     print "0 ?= ", LL - np.linalg.inv(RR)
 
 
+def setup_1d_problem():
+    Nx = 100
+    Ng = 6
+    Prim = np.zeros((Nx + 2*Ng, 5))
+
+    x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
+    Prim[Ng:-Ng,rho] = 1.0 + 3.2e-8 * np.sin(2*np.pi*x)
+    Prim[Ng:-Ng,pre] = 1.0
+    set_bc(Prim, Ng)
+
+    Cons = np.array([prim_to_cons(P) for P in Prim])
+    Cons += 0.001 * dUdt(Cons, dx)
+    Dudt = dUdt(Cons, dx)
+    set_bc(Dudt, Ng)
+    from matplotlib import pyplot as plt
+    plt.plot(Dudt[:,rho])#Prim[:,rho])
+    plt.show()
+
+
 def main():
+    setup_1d_problem()
     #test_c2p()
-    test_eigenvectors()
+    #test_eigenvectors()
 
 
 if __name__ == "__main__":
