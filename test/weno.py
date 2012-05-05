@@ -3,8 +3,8 @@
 import numpy as np
 
 
-rho, vx, vy, vz, pre = range(5)
-rho, px, py, pz, nrg = range(5)
+rho, pre, vx, vy, vz = range(5)
+rho, nrg, px, py, pz = range(5)
 Gamma = 1.4
 
 
@@ -60,21 +60,26 @@ def left_right_eigenvectors(P):
     a = (gm * P[pre] / P[rho])**0.5
     H = (U[nrg] + P[pre]) / P[rho]
 
-    # Toro Equation 3.82
     # --------------------------------------------------------------------------
-    RR = [[       1,      1,      0,      0,     1   ],
-          [     u-a,      u,      0,      0,     u+a ],
-          [       v,      v,      1,      0,     v   ],
-          [       w,      w,      0,      1,     w   ],
-          [ H - u*a, 0.5*V2,      v,      w, H + u*a ]]
-    
+    # Toro Equation 3.82 (transposed to deal with Mara's convention on the
+    # conserved quantities
+    # --------------------------------------------------------------------------
+    RR = [[       1,      1,      0,      0,     1   ], # rho
+          [ H - u*a, 0.5*V2,      v,      w, H + u*a ], # nrg
+          [     u-a,      u,      0,      0,     u+a ], # px
+          [       v,      v,      1,      0,     v   ], # py
+          [       w,      w,      0,      1,     w   ]] # pz
+    # --------------------------------------------------------------------------
     # Toro Equation 3.83 up to (gam - 1) / (2*a^2)
     # --------------------------------------------------------------------------
-    LL = [[    H + (a/gm1)*(u-a),  -(u+a/gm1),        -v,        -w,  1 ],
-          [ -2*H + (4/gm1)*(a*a),         2*u,       2*v,       2*w, -2 ],
-          [         -2*v*a*a/gm1,           0, 2*a*a/gm1,         0,  0 ],
-          [         -2*w*a*a/gm1,           0,         0, 2*a*a/gm1,  0 ],
-          [    H - (a/gm1)*(u+a),  -(u-a/gm1),        -v,        -w,  1 ]]
+    LL = [[    H + (a/gm1)*(u-a),   1, -(u+a/gm1),        -v,        -w ],
+          [ -2*H + (4/gm1)*(a*a),  -2,        2*u,       2*v,       2*w ],
+          [         -2*v*a*a/gm1,   0,          0, 2*a*a/gm1,         0 ],
+          [         -2*w*a*a/gm1,   0,          0,         0, 2*a*a/gm1 ],
+          [    H - (a/gm1)*(u+a),   1, -(u-a/gm1),        -v,        -w ]]
+    # --------------------------------------------------------------------------
+    #                        rho, nrg,         px,        py,        pz
+    # --------------------------------------------------------------------------
 
     norm = gm1 / (2*a*a)
     return np.matrix(LL)*norm, np.matrix(RR)
@@ -82,14 +87,14 @@ def left_right_eigenvectors(P):
 
 def weno5(v, c, d):
     eps = 1e-16
-    B = [(13.0/12.0)*(  v[ 2] - 2*v[ 3] +   v[ 4])**2 +
-         ( 1.0/ 4.0)*(3*v[ 2] - 4*v[ 3] +   v[ 4])**2,
+    B = [(13./12.)*(  v[2] - 2*v[3] +   v[4])**2 +
+         ( 1./ 4.)*(3*v[2] - 4*v[3] +   v[4])**2,
 
-         (13.0/12.0)*(  v[ 1] - 2*v[ 2] +   v[ 3])**2 +
-         ( 1.0/ 4.0)*(  v[ 1] - 0*v[ 2] -   v[ 3])**2,
+         (13./12.)*(  v[1] - 2*v[2] +   v[3])**2 +
+         ( 1./ 4.)*(  v[1] - 0*v[2] -   v[3])**2,
          
-         (13.0/12.0)*(  v[ 0] - 2*v[ 1] +   v[ 2])**2 +
-         ( 1.0/ 4.0)*(  v[ 0] - 4*v[ 1] + 3*v[ 2])**2]
+         (13./12.)*(  v[0] - 2*v[1] +   v[2])**2 +
+         ( 1./ 4.)*(  v[0] - 4*v[1] + 3*v[2])**2]
 
     vs = [c[0][0]*v[ 2] + c[0][1]*v[ 3] + c[0][2]*v[4],
           c[1][0]*v[ 1] + c[1][1]*v[ 2] + c[1][2]*v[3],
@@ -166,10 +171,6 @@ def set_outflow_bc(A, Ng):
 
 
 
-set_bc = set_periodic_bc
-get_flux = get_weno_flux
-
-
 def dUdt(Cons, Ng, dx):
     set_bc(Cons, Ng)
 
@@ -183,10 +184,8 @@ def dUdt(Cons, Ng, dx):
 
     for i in range(2,Nx_tot-3):
         F_hat[i] = get_flux(Cons, Prim, Flux, Mlam, i)
-
     for i in range(1,Nx_tot):
         L[i] = -(F_hat[i] - F_hat[i-1]) / dx
-
     return L
 
 
@@ -201,24 +200,37 @@ def test_eigenvectors():
     print "0 ?= ", LL - np.linalg.inv(RR)
 
 
-def setup_1d_problem():
-    Nx = 64
+def density_wave(x, t):
+    P = np.zeros(5)
+    c = 1.0
+    P[rho] = 1.0 + 3.2e-1 * np.sin(2*np.pi*(x - c*t))
+    P[pre] = 1.0
+    P[vx] = c
+    return P
+
+
+def shocktube1(x, t):
+    P = np.zeros(5)
+    P[rho] = 1.0 if x < 0.5 else 0.1
+    P[pre] = 1.0 if x < 0.5 else 0.125
+    return P
+
+
+#initial = shocktube1
+initial = density_wave
+#set_bc = set_outflow_bc
+set_bc = set_periodic_bc
+get_flux = get_weno_flux
+
+
+def run_1d_problem(Nx):
     Ng = 3
     CFL = 0.8
 
     Prim = np.zeros((Nx + 2*Ng, 5))
     x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
 
-    if True:
-        # Initial conditions for density wave
-        Prim[Ng:-Ng,rho] = 1.0 + 3.2e-1 * np.sin(2*np.pi*x)
-        Prim[Ng:-Ng,pre] = 1.0
-        Prim[Ng:-Ng,vx] = 1.0
-    else:
-        # Initial conditions for shocktube
-        Prim[Ng:-Ng,pre] = np.where(x < 0.5, 1.0, 0.125)
-        Prim[Ng:-Ng,rho] = np.where(x < 0.5, 1.0, 0.1)
-
+    Prim[Ng:-Ng] = [initial(xi, 0.0) for xi in x]
     set_bc(Prim, Ng)
     Cons = np.array([prim_to_cons(P) for P in Prim])
 
@@ -235,29 +247,60 @@ def setup_1d_problem():
         Cons += (1.0/6.0) * (L1 + 2.0*L2 + 2.0*L3 + L4)
         t += dt
 
-        print "we did it! t=%3.2f" % t
+        print "t=%3.2f" % t
 
 
+    Prim = np.array([cons_to_prim(U) for U in Cons])
+    Prim_true = np.array([initial(xi, t) for xi in x])
+    L1 = abs(Prim[Ng:-Ng] - Prim_true).sum() * dx
+
+    print "L1 =", L1
+    """
     from matplotlib import pyplot as plt
 
     Prim = np.array([cons_to_prim(U) for U in Cons])
-    plt.plot(Prim[Ng:-Ng,rho], "-o", label=r"$\rho$")
+    Prim_true = np.array([initial(xi, t) for xi in x])
+
+    plt.plot(Prim_true[:,rho], "x", label=r"$\rho_{\rm{true}}$")
+    plt.plot(Prim[Ng:-Ng,rho], "--", label=r"$\rho$")
     plt.plot(Prim[Ng:-Ng,pre], "-x", label=r"$p$")
     plt.plot(Prim[Ng:-Ng,vx], "-o", label=r"$v_x$")
     plt.plot(Prim[Ng:-Ng,vy], "-x", label=r"$v_y$")
     plt.plot(Prim[Ng:-Ng,vz], "-o", label=r"$v_z$")
+
+    plt.legend()
+    plt.show()
+    """
+    return L1
+
+
+def get_log_slope(x, y):
+    from scipy.optimize import leastsq
+    def errfunc(v):
+        return (v[0] - v[1]*np.log10(x)) - np.log10(y)
+    v0 = [0.0, -2.0]
+    v, success = leastsq(errfunc, v0)
+    return v[1]
+
+
+def plot_it():
+    Ns = [8, 16, 32, 64]#, 128, 256, 512]
+    Ls = [run_1d_problem(N) for N in Ns]
+
+    #exit()
+    order = get_log_slope(Ns, Ls)
+
+    from matplotlib import pyplot as plt
+    plt.loglog(Ns, Ls, '-o', label=r"order=$%3.2f$" % order)
     plt.legend()
     plt.show()
 
 
 def main():
-    setup_1d_problem()
+    plot_it()
     #test_c2p()
     #test_eigenvectors()
 
 
 if __name__ == "__main__":
     main()
-
-
-
