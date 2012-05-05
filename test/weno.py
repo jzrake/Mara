@@ -2,17 +2,9 @@
 
 import numpy as np
 
-rho = 0
-pre = 1
-vx = 2
-vy = 3
-vz = 4
 
-nrg = 1
-px = 2
-py = 3
-pz = 4
-
+rho, vx, vy, vz, pre = range(5)
+rho, px, py, pz, nrg = range(5)
 Gamma = 1.4
 
 
@@ -56,7 +48,7 @@ def max_wavespeed(P, take_abs=True):
         return max(abs(ap), abs(am))
     else:
         return ap, am
-    
+
 def left_right_eigenvectors(P):
     U = prim_to_cons(P)
     gm = Gamma
@@ -129,7 +121,6 @@ DeesC2R = [ 0.3, 0.6, 0.1 ]
 # i+1/2 interface.
 
 def get_weno_flux(Cons, Prim, Flux, Mlam, i):
-    Ptest = [1,1,0,0,0]
     LL, RR = left_right_eigenvectors(0.5*(Prim[i] + Prim[i+1]))
 
     P = [Prim[i-2+j] for j in range(6)]
@@ -175,7 +166,7 @@ def set_outflow_bc(A, Ng):
 
 
 
-set_bc = set_outflow_bc
+set_bc = set_periodic_bc
 get_flux = get_weno_flux
 
 
@@ -211,14 +202,14 @@ def test_eigenvectors():
 
 
 def setup_1d_problem():
-    Nx = 32
+    Nx = 64
     Ng = 3
-    CFL = 0.6
+    CFL = 0.8
 
     Prim = np.zeros((Nx + 2*Ng, 5))
     x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
 
-    if False:
+    if True:
         # Initial conditions for density wave
         Prim[Ng:-Ng,rho] = 1.0 + 3.2e-1 * np.sin(2*np.pi*x)
         Prim[Ng:-Ng,pre] = 1.0
