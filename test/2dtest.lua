@@ -12,7 +12,7 @@ function RunSimulation(CFL, EndTime)
    local start = os.clock()
 
    print_mara()
-   init_prim(KelvinHelmoltz)
+   init_prim(Explosion)--KelvinHelmoltz)
 
    while CurrentTime < EndTime do
 
@@ -89,7 +89,8 @@ set_riemann("hllc")
 --set_advance("single")
 
 set_advance("rk3")
-set_godunov("weno-riemann")
+set_godunov("weno-split")
+--set_godunov("weno-riemann")
 --set_godunov("plm-muscl", 2.0, 0)
 --set_godunov("plm-split", 2.0, 0)
 RunSimulation(0.7, 6.0)

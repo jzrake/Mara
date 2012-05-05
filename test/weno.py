@@ -88,24 +88,14 @@ def left_right_eigenvectors(P):
     return np.matrix(LL)*norm, np.matrix(RR)
 
 
-
-CeesC2L = [ [11./6., -7./6.,  1./3. ],
-            [ 1./3.,  5./6., -1./6. ],
-            [-1./6.,  5./6.,  1./3. ] ]
-CeesC2R = [ [ 1./3.,  5./6., -1./6. ],
-            [-1./6.,  5./6.,  1./3. ],
-            [ 1./3., -7./6., 11./6. ] ]
-DeesC2L = [ 0.1, 0.6, 0.3 ]
-DeesC2R = [ 0.3, 0.6, 0.1 ]
-
 def weno5(v, c, d):
     eps = 1e-16
     B = [(13.0/12.0)*(  v[ 2] - 2*v[ 3] +   v[ 4])**2 +
          ( 1.0/ 4.0)*(3*v[ 2] - 4*v[ 3] +   v[ 4])**2,
 
          (13.0/12.0)*(  v[ 1] - 2*v[ 2] +   v[ 3])**2 +
-         ( 1.0/ 4.0)*(3*v[ 1] - 0*v[ 2] -   v[ 3])**2,
-
+         ( 1.0/ 4.0)*(  v[ 1] - 0*v[ 2] -   v[ 3])**2,
+         
          (13.0/12.0)*(  v[ 0] - 2*v[ 1] +   v[ 2])**2 +
          ( 1.0/ 4.0)*(  v[ 0] - 4*v[ 1] + 3*v[ 2])**2]
 
@@ -116,10 +106,20 @@ def weno5(v, c, d):
     w = [d[0] / (eps + B[0])**2,
          d[1] / (eps + B[1])**2,
          d[2] / (eps + B[2])**2]
-
+    
     wtot = w[0] + w[1] + w[2]
     return (w[0]*vs[0] + w[1]*vs[1] + w[2]*vs[2])/wtot
 
+
+
+CeesC2L = [ [11./6., -7./6.,  1./3. ],
+            [ 1./3.,  5./6., -1./6. ],
+            [-1./6.,  5./6.,  1./3. ] ]
+CeesC2R = [ [ 1./3.,  5./6., -1./6. ],
+            [-1./6.,  5./6.,  1./3. ],
+            [ 1./3., -7./6., 11./6. ] ]
+DeesC2L = [ 0.1, 0.6, 0.3 ]
+DeesC2R = [ 0.3, 0.6, 0.1 ]
 
 
 
@@ -129,6 +129,7 @@ def weno5(v, c, d):
 # i+1/2 interface.
 
 def get_weno_flux(Cons, Prim, Flux, Mlam, i):
+    Ptest = [1,1,0,0,0]
     LL, RR = left_right_eigenvectors(0.5*(Prim[i] + Prim[i+1]))
 
     P = [Prim[i-2+j] for j in range(6)]
@@ -138,14 +139,16 @@ def get_weno_flux(Cons, Prim, Flux, Mlam, i):
 
     ml = max(A)
 
-    Fp = [0.5*(F[j] + ml*U[j]) for j in range(6)]
-    Fm = [0.5*(F[j] - ml*U[j]) for j in range(6)]
+    Fp = [np.matrix(0.5*(F[j] + ml*U[j])).T for j in range(6)]
+    Fm = [np.matrix(0.5*(F[j] - ml*U[j])).T for j in range(6)]
 
-    fp = [np.array(np.dot(LL, Fp[j]))[0] for j in range(6)]
-    fm = [np.array(np.dot(LL, Fm[j]))[0] for j in range(6)]
+    fp = [np.array(LL*Fp[j])[:,0] for j in range(6)]
+    fm = [np.array(LL*Fm[j])[:,0] for j in range(6)]
 
-    f = weno5(fp[0:5], CeesC2R, DeesC2R) + weno5(fm[1:6], CeesC2L, DeesC2L)
-    return np.dot(RR, f)
+    f = np.matrix(weno5(fp[0:5], CeesC2R, DeesC2R) +
+                  weno5(fm[1:6], CeesC2L, DeesC2L)).T
+
+    return np.array(RR*f)[:,0]
 
 
 def get_hll_flux(Cons, Prim, Flux, Mlam, i):
@@ -173,7 +176,7 @@ def set_outflow_bc(A, Ng):
 
 
 set_bc = set_outflow_bc
-get_flux = get_hll_flux
+get_flux = get_weno_flux
 
 
 def dUdt(Cons, Ng, dx):
@@ -208,17 +211,16 @@ def test_eigenvectors():
 
 
 def setup_1d_problem():
-    Nx = 128
+    Nx = 32
     Ng = 3
     CFL = 0.6
 
     Prim = np.zeros((Nx + 2*Ng, 5))
     x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
 
-
-    # Initial conditions for density wave
     if False:
-        Prim[Ng:-Ng,rho] = 1.0 + 3.2e-8 * np.sin(2*np.pi*x)
+        # Initial conditions for density wave
+        Prim[Ng:-Ng,rho] = 1.0 + 3.2e-1 * np.sin(2*np.pi*x)
         Prim[Ng:-Ng,pre] = 1.0
         Prim[Ng:-Ng,vx] = 1.0
     else:
@@ -226,16 +228,12 @@ def setup_1d_problem():
         Prim[Ng:-Ng,pre] = np.where(x < 0.5, 1.0, 0.125)
         Prim[Ng:-Ng,rho] = np.where(x < 0.5, 1.0, 0.1)
 
-
     set_bc(Prim, Ng)
-
-
     Cons = np.array([prim_to_cons(P) for P in Prim])
-    Prim = np.array([cons_to_prim(U) for U in Cons])
 
     dt = CFL * dx / np.array([max_wavespeed(P) for P in Prim]).max()
     t = 0.0
-    tmax = 0.10
+    tmax = 0.1
 
     while t < tmax:
         L1 = dt * dUdt(Cons, Ng, dx)
@@ -244,7 +242,6 @@ def setup_1d_problem():
         L4 = dt * dUdt(Cons + 1.0*L3, Ng, dx)
 
         Cons += (1.0/6.0) * (L1 + 2.0*L2 + 2.0*L3 + L4)
-        #Cons += L1
         t += dt
 
         print "we did it! t=%3.2f" % t
@@ -253,8 +250,12 @@ def setup_1d_problem():
     from matplotlib import pyplot as plt
 
     Prim = np.array([cons_to_prim(U) for U in Cons])
-    plt.plot(Prim[Ng:-Ng,rho], label=r"$\rho$")
-    plt.plot(Prim[Ng:-Ng,pre], label=r"$p$")
+    plt.plot(Prim[Ng:-Ng,rho], "-o", label=r"$\rho$")
+    plt.plot(Prim[Ng:-Ng,pre], "-x", label=r"$p$")
+    plt.plot(Prim[Ng:-Ng,vx], "-o", label=r"$v_x$")
+    plt.plot(Prim[Ng:-Ng,vy], "-x", label=r"$v_y$")
+    plt.plot(Prim[Ng:-Ng,vz], "-o", label=r"$v_z$")
+    plt.legend()
     plt.show()
 
 
@@ -266,3 +267,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
