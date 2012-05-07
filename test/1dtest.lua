@@ -211,7 +211,7 @@ local function setup_weno()
    set_domain({0.0}, {1.0}, {N}, 5, 3)
    set_fluid("euler")
    set_boundary("outflow")
-   set_advance("rk3")
+   set_advance("rk4")
    set_godunov("weno-split")
    set_eos("gamma-law", 1.4)
 end
@@ -239,18 +239,17 @@ local function CompareWenoEuler()
       end
    end
 
-   local Status = InitSimulation(pinit, setup_weno_riemann)
+   local Status = InitSimulation(pinit, setup_weno)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
 
    if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 
 local function IsentopicConvergenceRate()
-
    local function setup()
       set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 7)
       set_fluid("euler")

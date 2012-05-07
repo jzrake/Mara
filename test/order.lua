@@ -8,8 +8,8 @@ local tests = require 'tests'
 local RunArgs = {
    N       = 128,
    id      = "test",
-   CFL     = 0.8,
-   tmax    = 0.4,
+   CFL     = 0.6,
+   tmax    = 0.2,
    noplot  = false,
    quiet   = false
 }
@@ -54,5 +54,48 @@ local function IsentopicConvergenceRate()
 
 end
 
+local function DensityWaveConvergenceRate()
+   local outf = io.open("densitywave.dat", "w")
+   local res_values = { 64, 128, 256, 512, 1024 }
 
-IsentopicConvergenceRate()
+   for run_num,N in pairs(res_values) do
+      local function setup()
+	 set_domain({0.0}, {1.0}, {N}, 5, 7)
+	 set_fluid("euler")
+	 set_boundary("periodic")
+	 set_riemann("hllc")
+--	 set_advance("single")
+--	 set_godunov("plm-muscl", 2.0, 0)
+	 set_advance("rk4")
+	 set_godunov("weno-riemann")
+--	 set_godunov("weno-split")
+	 set_eos("gamma-law", 1.4)
+      end
+
+      local problem = tests.DensityWave
+      problem.eps = 3.2e-1
+      local status = util.run_simulation(problem:get_pinit(), setup, RunArgs)
+      
+      local P_comp = get_prim()
+
+      init_prim(problem:get_pinit(status.CurrentTime))
+      local P_true = get_prim()
+
+--      util.plot{rho_true=P_true.rho, rho_comp=P_comp.rho}
+--      os.exit()
+
+      local diff = P_comp.rho - P_true.rho
+
+      local L1 = 0.0
+      for i=0,diff:size()-1 do
+	 L1 = L1 + math.abs(diff[i]) / N
+      end
+
+      print("L1 = " .. math.log10(L1))
+      outf:write(N .. " " .. L1 .. "\n")
+   end
+end
+
+
+--IsentopicConvergenceRate()
+DensityWaveConvergenceRate()
