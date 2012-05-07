@@ -67,8 +67,8 @@ local function DensityWaveConvergenceRate()
 --	 set_advance("single")
 --	 set_godunov("plm-muscl", 2.0, 0)
 	 set_advance("rk4")
-	 set_godunov("weno-riemann")
---	 set_godunov("weno-split")
+--	 set_godunov("weno-riemann")
+	 set_godunov("weno-split")
 	 set_eos("gamma-law", 1.4)
       end
 
