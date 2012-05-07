@@ -187,9 +187,9 @@ end
 local function setup_plm2()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 2)
-   set_fluid("euler")
+   set_fluid("srhd")
    set_boundary("outflow")
-   set_advance("single")
+   set_advance("rk3")
    set_riemann("hllc")
    set_godunov("plm-split", 2.0, 0)
    set_eos("gamma-law", 1.4)
@@ -209,9 +209,10 @@ end
 local function setup_weno()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 3)
-   set_fluid("euler")
+   set_fluid("srhd")
    set_boundary("outflow")
    set_advance("rk4")
+   set_riemann("hllc")
    set_godunov("weno-split")
    set_eos("gamma-law", 1.4)
 end
