@@ -61,8 +61,8 @@ def left_right_eigenvectors(P):
     H = (U[nrg] + P[pre]) / P[rho]
 
     # --------------------------------------------------------------------------
-    # Toro Equation 3.82 (transposed to deal with Mara's convention on the
-    # conserved quantities
+    # Toro Equation 3.82 (rows are permuted to deal with Mara's convention on
+    # the conserved quantities)
     # --------------------------------------------------------------------------
     RR = [[       1,      1,      0,      0,     1   ], # rho
           [ H - u*a, 0.5*V2,      v,      w, H + u*a ], # nrg
@@ -96,9 +96,9 @@ def weno5(v, c, d):
          (13./12.)*(  v[0] - 2*v[1] +   v[2])**2 +
          ( 1./ 4.)*(  v[0] - 4*v[1] + 3*v[2])**2]
 
-    vs = [c[0][0]*v[ 2] + c[0][1]*v[ 3] + c[0][2]*v[4],
-          c[1][0]*v[ 1] + c[1][1]*v[ 2] + c[1][2]*v[3],
-          c[2][0]*v[ 0] + c[2][1]*v[ 1] + c[2][2]*v[2]]
+    vs = [c[0][0]*v[2] + c[0][1]*v[3] + c[0][2]*v[4],
+          c[1][0]*v[1] + c[1][1]*v[2] + c[1][2]*v[3],
+          c[2][0]*v[0] + c[2][1]*v[1] + c[2][2]*v[2]]
 
     w = [d[0] / (eps + B[0])**2,
          d[1] / (eps + B[1])**2,
@@ -122,7 +122,7 @@ DeesC2R = [ 0.3, 0.6, 0.1 ]
 
 # A 4-letter variable means a domain-global array. 1-letter variables are
 # 6-components lists of vectors. 2 letter variables, like LL and RR are
-# matrices. The indices 0 ... 5 inclusively label the zones surrounding the
+# matrices. The indices 0 ... 5 inclusively label the 6 zones surrounding the
 # i+1/2 interface.
 
 def get_weno_flux(Cons, Prim, Flux, Mlam, i):
@@ -147,6 +147,7 @@ def get_weno_flux(Cons, Prim, Flux, Mlam, i):
     return np.array(RR*f)[:,0]
 
 
+
 def get_hll_flux(Cons, Prim, Flux, Mlam, i):
     U, P, F = Cons, Prim, Flux
 
@@ -168,7 +169,6 @@ def set_outflow_bc(A, Ng):
     Nx = A.shape[0] - 2*Ng
     A[:Ng] = A[Ng+1]
     A[-Ng:] = A[-(Ng+1)]
-
 
 
 def dUdt(Cons, Ng, dx):
@@ -216,16 +216,16 @@ def shocktube1(x, t):
     return P
 
 
-#initial = shocktube1
-initial = density_wave
-#set_bc = set_outflow_bc
-set_bc = set_periodic_bc
+initial = shocktube1
+#initial = density_wave
+set_bc = set_outflow_bc
+#set_bc = set_periodic_bc
 get_flux = get_weno_flux
 
 
 def run_1d_problem(Nx):
     Ng = 3
-    CFL = 0.8
+    CFL = 0.6
 
     Prim = np.zeros((Nx + 2*Ng, 5))
     x, dx = np.linspace(0.0, 1.0, Nx, retstep=True)
@@ -255,7 +255,7 @@ def run_1d_problem(Nx):
     L1 = abs(Prim[Ng:-Ng] - Prim_true).sum() * dx
 
     print "L1 =", L1
-    """
+
     from matplotlib import pyplot as plt
 
     Prim = np.array([cons_to_prim(U) for U in Cons])
@@ -270,7 +270,7 @@ def run_1d_problem(Nx):
 
     plt.legend()
     plt.show()
-    """
+
     return L1
 
 
@@ -284,10 +284,10 @@ def get_log_slope(x, y):
 
 
 def plot_it():
-    Ns = [8, 16, 32, 64]#, 128, 256, 512]
+    Ns = [64]#[8, 16, 32, 64]#, 128, 256, 512]
     Ls = [run_1d_problem(N) for N in Ns]
 
-    #exit()
+    exit()
     order = get_log_slope(Ns, Ls)
 
     from matplotlib import pyplot as plt
