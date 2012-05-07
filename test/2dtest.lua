@@ -1,5 +1,5 @@
 
-
+local tests = require 'tests'
 
 function RunSimulation(CFL, EndTime)
 
@@ -14,10 +14,16 @@ function RunSimulation(CFL, EndTime)
    print_mara()
    init_prim(Explosion)--KelvinHelmoltz)
 
+--   local problem = tests.DensityWave
+--   problem.velocity = { 1.0, 1.0, 0 }
+--   problem.mode = { 1.0, 1.0, 0 }
+--   init_prim(tests.DensityWave:get_pinit(0.0))
+
    while CurrentTime < EndTime do
 
       local prim = get_prim()
-      visual.draw_texture(prim.rho)
+      local draw_array = prim.rho[':,8,:']
+      visual.draw_texture(draw_array)
 
 --      local ppmname = string.format("images/output-%04d.ppm", Iteration)
 --      write_ppm(ppmname, prim["rho"])
@@ -44,8 +50,8 @@ end
 
 
 function Explosion(x,y,z)
-   local r2 = x*x + y*y
-   if r2 < 0.0005 then
+   local r2 = x*x + y*y + z*z
+   if r2 < 0.005 then
       return { 1.000, 1.0, 0, 0, 0 }
    else
       return { 0.125, 0.1, 0, 0, 0 }
@@ -80,7 +86,8 @@ function ExplosionRmhd(x,y,z)
 end
 
 
-set_domain({-0.5, -0.5}, {0.5, 0.5}, {64, 64}, 5, 7)
+set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 3)
+--set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 3)
 set_fluid("euler")
 set_eos("gamma-law", 1.4)
 --set_boundary("reflect2d", 2, 3)
@@ -88,10 +95,10 @@ set_boundary("periodic")
 set_riemann("hllc")
 --set_advance("single")
 
-set_advance("rk3")
+set_advance("rk4")
 set_godunov("weno-split")
 --set_godunov("weno-riemann")
 --set_godunov("plm-muscl", 2.0, 0)
 --set_godunov("plm-split", 2.0, 0)
-RunSimulation(0.7, 6.0)
+RunSimulation(0.4, 6.0)
 

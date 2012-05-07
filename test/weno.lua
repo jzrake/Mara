@@ -33,26 +33,31 @@ local function Jacobian1(U, n) -- n must be a unit vector
    local a2 = gm*p0/D     -- sound speed
    local h0 = a2 / g1 + ek
 
-   A = { { 0, nx, ny, nz, 0 },
-         { g1*ek*nx - u*vn,
-           1*vn - g2*u*nx,
-           u*ny - g1*v*nx,
-           u*nz - g1*w*nx, g1*nx },
-
-         { g1*ek*ny - v*vn,
-           v*nx - g1*u*ny,
-           1*vn - g2*v*ny,
-           v*nz - g1*w*ny, g1*ny },
-
-         { g1*ek*nz - w*vn,
-           w*nx - g1*u*nz,
-           w*ny - g1*v*nz,
-           1*vn - g2*w*nz, g1*nz },
+   A = { { 0, 0, nx, ny, nz },
 
          { (g1*ek-h0)*vn,
+	   gm*vn,
            h0*nx - g1*u*vn,
            h0*ny - g1*v*vn,
-           h0*nz - g1*w*vn, gm*vn } }
+           h0*nz - g1*w*vn },
+
+         { g1*ek*nx - u*vn,
+	   g1*nx,
+           1*vn - g2*u*nx,
+           u*ny - g1*v*nx,
+           u*nz - g1*w*nx },
+
+         { g1*ek*ny - v*vn,
+	   g1*ny,
+           v*nx - g1*u*ny,
+           1*vn - g2*v*ny,
+           v*nz - g1*w*ny },
+
+         { g1*ek*nz - w*vn,
+	   g1*nz,
+           w*nx - g1*u*nz,
+           w*ny - g1*v*nz,
+           1*vn - g2*w*nz } }
 
    return matrix(A) -- output is A := dF{D,px,py,pz,E}/d{D,px,py,pz,E}, Toro's convention
 end
@@ -94,7 +99,7 @@ local function TestState(P, dim)
    local U = fluid.PrimToCons(P)
    local Lv, Rv, lm = fluid.Eigensystem(P, dim)
 
-   local A = Jacobian1(U, n)
+   local A = Jacobian2(U, n)
    local Lv, Rv, lm = fluid.Eigensystem(P, dim)
 
 --   print((Jacobian2(U, n) - A):replace(clip))
