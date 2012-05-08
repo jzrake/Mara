@@ -210,7 +210,7 @@ end
 local function setup_weno()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 3)
-   set_fluid("srhd")
+   set_fluid("euler")
    set_boundary("outflow")
    set_advance("rk4")
 --   set_riemann("hllc")
@@ -232,21 +232,21 @@ end
 
 local function CompareWenoEuler()
 
-   local problem = tests.MakeShocktubeProblem(tests.SrhdCase1_DFIM98)
---   local problem = tests.MakeShocktubeProblem(Euler1dProblems.Shocktube1)
+--   local problem = tests.MakeShocktubeProblem(tests.SrhdCase1_DFIM98)
+   local problem = tests.MakeShocktubeProblem(Euler1dProblems.Shocktube1, {reverse=false})
    local Status = InitSimulation(problem:get_pinit(), setup_weno)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
 
    if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho/10, pre=P.pre/20, vx=P.vx, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
    end
 end
 
 local function IsentopicConvergenceRate()
    local function setup()
-      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 7)
+      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 3)
       set_fluid("euler")
       set_boundary("periodic")
       set_riemann("hllc")
