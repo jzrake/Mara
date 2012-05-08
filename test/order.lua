@@ -104,7 +104,7 @@ local function DensityWaveConvergenceRate2d()
    for run_num,N in pairs(res_values) do
       local function setup()
 	 set_domain({0.0, 0.0}, {1.0, 1.0}, {N, N}, 5, 3)
-	 set_fluid("euler")
+	 set_fluid("srhd")
 	 set_boundary("periodic")
 	 set_riemann("hllc")
 --	 set_advance("single")
@@ -117,6 +117,7 @@ local function DensityWaveConvergenceRate2d()
 
       local problem = tests.DensityWave
       problem.eps = 3.2e-1
+      problem.velocity = { 0.1, 0.0, 0.0 }
       local status = util.run_simulation(problem:get_pinit(), setup, RunArgs)
       
       local P_comp = get_prim()
