@@ -209,7 +209,7 @@ end
 local function setup_weno()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 3)
-   set_fluid("srhd")
+   set_fluid("euler")
    set_boundary("outflow")
    set_advance("rk4")
    set_riemann("hllc")
