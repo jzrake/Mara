@@ -86,9 +86,9 @@ function ExplosionRmhd(x,y,z)
 end
 
 
-set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 3)
---set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 3)
-set_fluid("euler")
+set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 7)
+--set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 7)
+set_fluid("srhd")
 set_eos("gamma-law", 1.4)
 --set_boundary("reflect2d", 2, 3)
 set_boundary("periodic")
