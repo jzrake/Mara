@@ -213,8 +213,9 @@ local function setup_weno()
    set_fluid("euler")
    set_boundary("outflow")
    set_advance("rk4")
---   set_riemann("hllc")
+   set_riemann("hllc")
    set_godunov("weno-split")
+   set_godunov("plm-split", 2, 0)
    set_eos("gamma-law", 1.4)
 end
 
