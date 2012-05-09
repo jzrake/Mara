@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 
-
-
-
-
-
-
 def ConfigureMaraBuild():
 
     from os import getcwd, mkdir, system
