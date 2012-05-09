@@ -124,4 +124,4 @@ end
 
 
 local P = { 1, 2, 0.5, 0.5, 0.5 }
-TestState(P, 2)
+TestState(P, 1)
