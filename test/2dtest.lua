@@ -22,7 +22,7 @@ function RunSimulation(CFL, EndTime)
    while CurrentTime < EndTime do
 
       local prim = get_prim()
-      local draw_array = prim.rho[':,8,:']
+      local draw_array = prim.rho[':,:']
       visual.draw_texture(draw_array)
 
 --      local ppmname = string.format("images/output-%04d.ppm", Iteration)
@@ -86,9 +86,9 @@ function ExplosionRmhd(x,y,z)
 end
 
 
-set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 7)
---set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 7)
-set_fluid("srhd")
+--set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 7)
+set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 3)
+set_fluid("euler")
 set_eos("gamma-law", 1.4)
 --set_boundary("reflect2d", 2, 3)
 set_boundary("periodic")
@@ -96,9 +96,7 @@ set_riemann("hllc")
 --set_advance("single")
 
 set_advance("rk4")
-set_godunov("weno-split")
---set_godunov("weno-riemann")
---set_godunov("plm-muscl")
 --set_godunov("plm-split")
+set_godunov("weno-split")
 RunSimulation(0.4, 6.0)
 
