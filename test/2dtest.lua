@@ -58,7 +58,7 @@ function RunSimulation(CFL, EndTime)
    while CurrentTime < EndTime do
 
       local prim = get_prim()
-      local draw_array = prim.rho[':,8,:']
+      local draw_array = prim.rho[':,:']
       visual.draw_texture(draw_array)
 
 --      local ppmname = string.format("images/output-%04d.ppm", Iteration)
@@ -131,7 +131,5 @@ set_boundary(RunArgs.boundary)
 set_advance(RunArgs.advance)
 set_riemann(RunArgs.riemann)
 set_godunov(RunArgs.godunov)
-set_advance("rk4")
-set_godunov("weno-split")
 
 RunSimulation(RunArgs.CFL, RunArgs.tmax)
