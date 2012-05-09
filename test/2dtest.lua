@@ -1,6 +1,42 @@
-
+local json = require 'json'
+local host = require 'host'
+local util = require 'util'
 local tests = require 'tests'
 
+local Quiet = false
+local RunArgs = {
+   N           = 16,
+   id          = "test",
+   CFL         = 0.4,
+   tmax        = 6.0,
+   noplot      = false,
+   eosfile     = "none", -- tabeos.h5
+   fluid       = "euler",
+   boundary    = "outflow",
+   advance     = "rk4",
+   riemann     = "hllc",
+   godunov     = "weno-split",
+   reconstruct = "weno5",
+   eos         = "gamma-law",
+   adgam       = 1.4
+}
+
+for k,v in pairs(cmdline.opts) do
+   if type(RunArgs[k]) == 'number' then
+      RunArgs[k] = tonumber(v)
+   else
+      RunArgs[k] = v
+   end
+end
+
+
+local function HandleErrors(Status, attempt)
+   return 0
+end
+
+-- *****************************************************************************
+-- Main driver, operates between checkpoints and then returns
+-- .............................................................................
 function RunSimulation(CFL, EndTime)
 
    visual.open_window()
@@ -85,20 +121,17 @@ function ExplosionRmhd(x,y,z)
    end
 end
 
+local N = RunArgs.N
+local NumberOfGhosts = { rmhd=8, srhd=5, euler=5 }
 
-set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {16,16,16}, 5, 7)
---set_domain({-0.5, -0.5}, {0.5, 0.5}, {16, 16}, 5, 7)
-set_fluid("srhd")
-set_eos("gamma-law", 1.4)
---set_boundary("reflect2d", 2, 3)
-set_boundary("periodic")
-set_riemann("hllc")
---set_advance("single")
-
+set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {N,N,N}, NumberOfGhosts[RunArgs.fluid], 7)
+set_fluid(RunArgs.fluid)
+set_eos(RunArgs.eos,RunArgs.adgam)
+set_boundary(RunArgs.boundary)
+set_advance(RunArgs.advance)
+set_riemann(RunArgs.riemann)
+set_godunov(RunArgs.godunov)
 set_advance("rk4")
 set_godunov("weno-split")
---set_godunov("weno-riemann")
---set_godunov("plm-muscl")
---set_godunov("plm-split")
-RunSimulation(0.4, 6.0)
 
+RunSimulation(RunArgs.CFL, RunArgs.tmax)

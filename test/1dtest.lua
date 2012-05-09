@@ -1,4 +1,3 @@
-
 local json = require 'json'
 local host = require 'host'
 local util = require 'util'
@@ -6,12 +5,20 @@ local tests = require 'tests'
 
 local Quiet = false
 local RunArgs = {
-   N       = 128,
-   id      = "test",
-   CFL     = 0.8,
-   tmax    = 0.4,
-   noplot  = false,
-   eosfile = "none" -- tabeos.h5
+   N           = 128,
+   id          = "test",
+   CFL         = 0.8,
+   tmax        = 0.4,
+   noplot      = false,
+   eosfile     = "none", -- tabeos.h5
+   fluid       = "euler",
+   boundary    = "outflow",
+   advance     = "rk4",
+   riemann     = "hllc",
+   godunov     = "weno-split",
+   reconstruct = "weno5",
+   eos         = "gamma-law",
+   adgam       = 1.4
 }
 
 for k,v in pairs(cmdline.opts) do
@@ -173,70 +180,24 @@ local function InitSimulation(pinit, setup)
    return Status
 end
 
-
-local function setup_plm1()
+local function setup()
    local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 5, 2)
-   set_fluid("euler")
-   set_boundary("outflow")
-   set_advance("single")
-   set_riemann("hllc")
-   set_godunov("plm-muscl")
-   set_eos("gamma-law", 1.4)
+   local NumberOfGhosts = { rmhd=8, srhd=5, euler=5 }
+   set_domain({0.0}, {1.0}, {N}, NumberOfGhosts[RunArgs.fluid], 3)
+   set_fluid(RunArgs.fluid)
+   set_boundary(RunArgs.boundary)
+   set_advance(RunArgs.advance)
+   set_riemann(RunArgs.riemann)
+   set_godunov(RunArgs.godunov)
+   set_reconstruct(RunArgs.reconstruct)
+   set_eos(RunArgs.eos,RunArgs.adgam)
 end
-
-local function setup_plm2()
-   local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 5, 2)
-   set_fluid("srhd")
-   set_boundary("outflow")
-   set_advance("rk3")
-   set_riemann("hllc")
-   set_godunov("plm-split")
-   set_eos("gamma-law", 1.4)
-end
-
-local function setup_weno_riemann()
-   local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 5, 7)
-   set_fluid("euler")
-   set_boundary("outflow")
-   set_advance("rk4")
-   set_riemann("hllc")
-   set_godunov("weno-riemann")
-   set_eos("gamma-law", 1.4)
-end
-
-local function setup_weno()
-   local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 5, 3)
-   set_fluid("euler")
-   set_boundary("outflow")
-   set_advance("rk4")
-   set_riemann("hllc")
-   set_godunov("weno-split")
---   set_godunov("plm-split")
-   set_reconstruct("weno5")
-   set_eos("gamma-law", 1.4)
-end
-
-local function setup_rmhd()
-   local N = RunArgs.N
-   set_domain({0.0}, {1.0}, {N}, 8, 2)
-   set_fluid("rmhd")
-   set_boundary("outflow")
-   set_riemann("hlld")
-   set_advance("single")
-   set_godunov("plm-muscl")
-   set_eos("gamma-law", 1.4)
-end
-
 
 local function CompareWenoEuler()
 
---   local problem = tests.MakeShocktubeProblem(tests.SrhdCase1_DFIM98)
+-- local problem = tests.MakeShocktubeProblem(tests.SrhdCase1_DFIM98)
    local problem = tests.MakeShocktubeProblem(Euler1dProblems.Shocktube1, {reverse=false})
-   local Status = InitSimulation(problem:get_pinit(), setup_weno)
+   local Status = InitSimulation(problem:get_pinit(), setup)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
@@ -247,21 +208,10 @@ local function CompareWenoEuler()
 end
 
 local function IsentopicConvergenceRate()
-   local function setup()
-      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 3)
-      set_fluid("euler")
-      set_boundary("periodic")
-      set_riemann("hllc")
---      set_advance("single")
---      set_godunov("plm-muscl")
-      set_advance("rk4")
---      set_godunov("weno-riemann")
-      set_godunov("weno-split")
-      set_eos("gamma-law", 1.4)
-   end
 
-   local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit,
-				 setup)
+   RunArgs.boundary = "periodic"
+
+   local Status = InitSimulation(Euler1dProblems.IsentropicPulse.pinit, setup)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
@@ -279,15 +229,10 @@ end
 
 local function CompareEosRmhd()
 
-   local function setup()
-      local N = RunArgs.N
-      set_domain({0.0}, {1.0}, {N}, 8, 2)
-      set_fluid("rmhd")
-      set_boundary("outflow")
-      set_riemann("hlld")
-      set_advance("single")
-      set_godunov("plm-muscl")
-   end
+   RunArgs.fluid   = "rmhd"
+   RunArgs.riemann = "hlld"
+   RunArgs.advance = "single"
+   RunArgs.godunov = "plm-muscl"
 
    if RunArgs.eosfile ~= "none" then
       local tabeos = require 'tabeos'
