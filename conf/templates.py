@@ -63,7 +63,7 @@ FFTW_I = -I$(FFTW_HOME)/include
 ifeq ($(shell uname), Linux)
 ARCH_LUA  = linux
 ARCH_GLFW = x11
-GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw
+GL_L      = -lglfw -lXrandr -lX11 -lGLU -lGL
 endif
 
 ifeq ($(shell uname), Darwin)
