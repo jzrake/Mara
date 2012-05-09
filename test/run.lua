@@ -53,11 +53,11 @@ set_riemann("hllc")
 runs = { }
 
 set_advance("rk2")
-set_godunov("plm-split", 2.0, 0)
+set_godunov("plm-split")
 runs["plm-split"] = RunSimulation(0.8, 0.2)
 
 set_advance("single")
-set_godunov("plm-muscl", 2.0, 0)
+set_godunov("plm-muscl")
 runs["plm-muscl"] = RunSimulation(0.8, 0.2)
 
 function plot(runs, var, gp)

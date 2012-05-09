@@ -57,7 +57,7 @@ function InitSimulation()
    set_boundary("periodic")
    set_riemann("hllc")
    set_advance("single")
-   set_godunov("plm-muscl", 2.0, 0)
+   set_godunov("plm-muscl")
    set_driving(new_ou_field(3, 1.0, 1.0, 2, 12345))
 
    init_prim(pinit)

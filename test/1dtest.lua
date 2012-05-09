@@ -181,7 +181,7 @@ local function setup_plm1()
    set_boundary("outflow")
    set_advance("single")
    set_riemann("hllc")
-   set_godunov("plm-muscl", 2.0, 0)
+   set_godunov("plm-muscl")
    set_eos("gamma-law", 1.4)
 end
 
@@ -192,7 +192,7 @@ local function setup_plm2()
    set_boundary("outflow")
    set_advance("rk3")
    set_riemann("hllc")
-   set_godunov("plm-split", 2.0, 0)
+   set_godunov("plm-split")
    set_eos("gamma-law", 1.4)
 end
 
@@ -215,7 +215,8 @@ local function setup_weno()
    set_advance("rk4")
    set_riemann("hllc")
    set_godunov("weno-split")
-   set_godunov("plm-split", 2, 0)
+--   set_godunov("plm-split")
+   set_reconstruct("weno5")
    set_eos("gamma-law", 1.4)
 end
 
@@ -226,7 +227,7 @@ local function setup_rmhd()
    set_boundary("outflow")
    set_riemann("hlld")
    set_advance("single")
-   set_godunov("plm-muscl", 2.0, 0)
+   set_godunov("plm-muscl")
    set_eos("gamma-law", 1.4)
 end
 
@@ -252,7 +253,7 @@ local function IsentopicConvergenceRate()
       set_boundary("periodic")
       set_riemann("hllc")
 --      set_advance("single")
---      set_godunov("plm-muscl", 2.0, 0)
+--      set_godunov("plm-muscl")
       set_advance("rk4")
 --      set_godunov("weno-riemann")
       set_godunov("weno-split")
@@ -285,7 +286,7 @@ local function CompareEosRmhd()
       set_boundary("outflow")
       set_riemann("hlld")
       set_advance("single")
-      set_godunov("plm-muscl", 2.0, 0)
+      set_godunov("plm-muscl")
    end
 
    if RunArgs.eosfile ~= "none" then
