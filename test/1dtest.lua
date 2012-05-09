@@ -2,6 +2,7 @@
 local json = require 'json'
 local host = require 'host'
 local util = require 'util'
+local tests = require 'tests'
 
 local Quiet = false
 local RunArgs = {
@@ -209,10 +210,10 @@ end
 local function setup_weno()
    local N = RunArgs.N
    set_domain({0.0}, {1.0}, {N}, 5, 3)
-   set_fluid("srhd")
+   set_fluid("euler")
    set_boundary("outflow")
    set_advance("rk4")
-   set_riemann("hllc")
+--   set_riemann("hllc")
    set_godunov("weno-split")
    set_eos("gamma-law", 1.4)
 end
@@ -231,28 +232,21 @@ end
 
 local function CompareWenoEuler()
 
-   local problem = Euler1dProblems.Shocktube1
-   local function pinit(x,y,z)
-      if x < 0.5 then
-         return problem.Pl
-      else
-         return problem.Pr
-      end
-   end
-
-   local Status = InitSimulation(pinit, setup_weno)
+--   local problem = tests.MakeShocktubeProblem(tests.SrhdCase1_DFIM98)
+   local problem = tests.MakeShocktubeProblem(Euler1dProblems.Shocktube1, {reverse=false})
+   local Status = InitSimulation(problem:get_pinit(), setup_weno)
    RunSimulation(Status, RunArgs.tmax)
 
    local P = get_prim()
 
    if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
    end
 end
 
 local function IsentopicConvergenceRate()
    local function setup()
-      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 7)
+      set_domain({0.0}, {1.0}, {RunArgs.N}, 5, 3)
       set_fluid("euler")
       set_boundary("periodic")
       set_riemann("hllc")
