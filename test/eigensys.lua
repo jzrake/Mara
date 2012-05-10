@@ -4,7 +4,7 @@ local matrix = require 'matrix'
 local util = require 'util'
 
 
-local Direction = 1
+local Direction = 3
 local PrimState = { 1.0, 4.0, 0.1, 0.1, 0.1 }
 local FluidType = "srhd"
 
@@ -30,10 +30,19 @@ local function JacobianSrhd(U, n)
          local P0 = fluid.ConsToPrim(U0)
          local P1 = fluid.ConsToPrim(U1)
 
-         F0 = fluid.FluxFunction(P0, Direction)
-         F1 = fluid.FluxFunction(P1, Direction)
+         local F0 = fluid.FluxFunction(P0, 1)
+         local F1 = fluid.FluxFunction(P1, 1)
 
-         J[i+1][j+1] = (F1[i] - F0[i]) / (U1[j] - U0[j])
+         local G0 = fluid.FluxFunction(P0, 2)
+         local G1 = fluid.FluxFunction(P1, 2)
+
+         local H0 = fluid.FluxFunction(P0, 3)
+         local H1 = fluid.FluxFunction(P1, 3)
+
+	 local Fn0 = n[1]*F0 + n[2]*G0 + n[3]*H0
+	 local Fn1 = n[1]*F1 + n[2]*G1 + n[3]*H1
+
+         J[i+1][j+1] = (Fn1[i] - Fn0[i]) / (U1[j] - U0[j])
       end
    end
    return matrix(J)
@@ -114,7 +123,6 @@ local function JacobianToro(U, n) -- n must be {1,0,0}
                { g1*H - u^2 - a2, g1, (3-gm)*u, -g1*v, -g1*w },
                { -u*v, 0, v, u, 0 },
                { -u*w, 0, w, 0, u } }
-
    return matrix(A)
 end
 
