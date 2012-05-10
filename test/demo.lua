@@ -4,26 +4,38 @@ local util = require 'util'
 local tests = require 'tests'
 
 local RunArgs = {
-   N           = 64,
-   dim         = 1,
-   id          = "test",
-   ic          = "Shocktube1", -- name of test problem
-   CFL         = 0.6,
-   tmax        = 0.2,
-   noplot      = false,
-   eosfile     = "none", -- tabeos.h5
-   fluid       = "euler",
-   boundary    = "outflow",
-   advance     = "rk4",
-   riemann     = "hllc",
-   godunov     = "weno-split",
-   reconstruct = "weno5",
-   eos         = "gamma-law",
-   adgam       = 1.4,
-   quiet       = false,
-   problem     = "shocktube",
-   plotvars    = "rho,pre,vx,vy,vz",
-   angle       = "{1,0,0}"
+   N         = 64,
+   dim       = 1,
+   id        = "test",
+   ic        = "Shocktube1", -- name of test problem
+   CFL       = 0.6,
+   tmax      = 0.2,
+   noplot    = false,
+   eosfile   = "none", -- tabeos.h5
+   fluid     = "euler",
+   boundary  = "outflow",
+   advance   = "rk4",
+   riemann   = "hllc",
+   godunov   = "weno-split",
+
+   -- --------------------------------------------------------------------------
+   -- flags sent to config_solver
+   -- --------------------------------------------------------------------------
+   fsplit    = "llf",  -- one of [llf, marq]       ... flux splitting mode
+   extrap    = "weno5",-- one of [pcm, plm, weno5] ... reconstruction type
+   theta     = 2.0,    -- must be [0,2]            ... theta value for PLM/minmod
+   IS        = "js96", -- one of [js96, b08, sz10] ... smoothness indicator
+   sz10A     = 50.0,   -- should be in [0,100]     ... used by sz10 (see weno.c)
+
+   -- --------------------------------------------------------------------------
+   -- flags for particular initial conditions setups
+   -- --------------------------------------------------------------------------
+   eos       = "gamma-law",
+   adgam     = 1.4,
+   quiet     = false,
+   problem   = "shocktube",
+   plotvars  = "rho,pre,vx,vy,vz",
+   angle     = "{1,0,0}",
 }
 util.parse_args(RunArgs)
 tests.RunArgs = RunArgs
@@ -66,11 +78,11 @@ local function cfg_mara()
    elseif type(RunArgs.boundary) == "table" then
       set_boundary(unpack(RunArgs.boundary))
    end
+   config_solver(RunArgs)
    set_fluid(RunArgs.fluid)
    set_advance(RunArgs.advance)
    set_riemann(RunArgs.riemann)
    set_godunov(RunArgs.godunov)
-   set_reconstruct(RunArgs.reconstruct)
    set_eos(RunArgs.eos,RunArgs.adgam)
 end
 
