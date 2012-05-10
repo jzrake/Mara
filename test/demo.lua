@@ -8,7 +8,7 @@ local RunArgs = {
    dim         = 1,
    id          = "test",
    ic          = "Shocktube1", -- name of test problem
-   CFL         = 0.5,
+   CFL         = 0.6,
    tmax        = 0.2,
    noplot      = false,
    eosfile     = "none", -- tabeos.h5
@@ -20,54 +20,53 @@ local RunArgs = {
    reconstruct = "weno5",
    eos         = "gamma-law",
    adgam       = 1.4,
-   vis         = "default",
    quiet       = false,
-   problem     = "defaultshocktube",
-   interactive = false
+   problem     = "shocktube",
+   plotvars    = "rho,pre,vx,vy,vz",
+   angle       = "{1,0,0}"
 }
-
-for k,v in pairs(cmdline.opts) do
-   if type(RunArgs[k]) == 'number' then
-      RunArgs[k] = tonumber(v)
-   else
-      RunArgs[k] = v
-   end
-end
-
-if RunArgs.dim ~= 1 and RunArgs.vis == "default" then
-   RunArgs.interactive = true
-elseif RunArgs.dim == 1 and RunArgs.vis == "default" then
-   RunArgs.interactive = false
-elseif RunArgs.vis == "false" then
-   RunArgs.interactive = false
-elseif RunArgs.vis == "true" then
-   RunArgs.interactive = true
-else print("vis must equal 'false' or 'true'")
-end
+util.parse_args(RunArgs)
+tests.RunArgs = RunArgs
 
 
 local function HandleErrors(Status, attempt)
    return 0
 end
 
-local function setup()
+local function plot_prim()
+   if not RunArgs.noplot then
+      local P = get_prim()
+      local pltdict =  { }
+      for k,v in pairs(util.string_split(RunArgs.plotvars, ",")) do
+	 pltdict[v] = P[v]
+      end
+      if RunArgs.dim == 1 then
+	 util.plot(pltdict)
+      end
+   end
+end
+
+local function cfg_mara()
    local N = RunArgs.N
    local NumberOfConserved = { rmhd=8, srhd=5, euler=5 }
+   local Nq = NumberOfConserved[RunArgs.fluid]
 
    if RunArgs.dim == 1 then
-      set_domain({0.0}, {1.0}, {N},
-                 NumberOfConserved[RunArgs.fluid], 3)
+      set_domain({0}, {1}, {N}, Nq, 3)
    elseif RunArgs.dim == 2 then
-      set_domain({-0.5, -0.5}, {0.5, 0.5}, {N,N},
-                 NumberOfConserved[RunArgs.fluid], 3)
+      set_domain({0,0}, {1,1}, {N,N}, Nq, 3)
    elseif RunArgs.dim == 3 then
-      set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {N,N,N},
-                 NumberOfConserved[RunArgs.fluid], 3)
-   else print("Invalid Dimension")
+      set_domain({0,0,0}, {1,1,1}, {N,N,N}, Nq, 3)
+   else
+      error("Invalid Dimension")
    end
-
+   
+   if type(RunArgs.boundary) == "string" then
+      set_boundary(RunArgs.boundary)
+   elseif type(RunArgs.boundary) == "table" then
+      set_boundary(unpack(RunArgs.boundary))
+   end
    set_fluid(RunArgs.fluid)
-   set_boundary(RunArgs.boundary)
    set_advance(RunArgs.advance)
    set_riemann(RunArgs.riemann)
    set_godunov(RunArgs.godunov)
@@ -76,10 +75,9 @@ local function setup()
 end
 
 
+local ProblemList = { }
 
-
-----------------------------------------------------------
-local function DensityWaveConvergenceRate()
+function ProblemList.DensityWaveConvergenceRate()
    local outf = io.open("densitywave.dat", "w")
    RunArgs.boundary = "periodic"
 
@@ -96,7 +94,7 @@ local function DensityWaveConvergenceRate()
 
       problem.velocity = { 0.1, 0.0, 0.0 }
 
-      local status = util.run_simulation(problem:get_pinit(), setup, RunArgs)
+      local status = util.run_simulation(problem:get_pinit(), cfg_mara, RunArgs)
       local P_comp = get_prim()
 
       init_prim(problem:get_pinit(status.CurrentTime))
@@ -113,8 +111,9 @@ local function DensityWaveConvergenceRate()
       outf:write(N .. " " .. L1 .. "\n")
    end
 end
-----------------------------------------------------------
-local function IsentopicConvergenceRate()
+
+
+function ProblemList.IsentopicConvergenceRate()
    local outf = io.open("isentropic.dat", "w")
    RunArgs.boundary = "periodic"
 
@@ -128,7 +127,7 @@ local function IsentopicConvergenceRate()
       RunArgs.N = N
       local problem = tests.IsentropicPulse
       problem.mode = 2
-      util.run_simulation(problem:get_pinit(), setup, RunArgs)
+      util.run_simulation(problem:get_pinit(), cfg_mara, RunArgs)
 
       local P = get_prim()
       local dS = problem:entropy(P.rho, P.pre) - problem.entropy_ref
@@ -142,129 +141,62 @@ local function IsentopicConvergenceRate()
       outf:write(N .. " " .. L1 .. "\n")
    end
 end
-----------------------------------------------------------
-local function CompareEosRmhd()
+
+
+
+function ProblemList.RmhdExplosion()
    RunArgs.fluid   = "rmhd"
    RunArgs.riemann = "hlld"
    RunArgs.advance = "single"
    RunArgs.godunov = "plm-muscl"
-   RunArgs.boundary = "outflow"
-
-   if RunArgs.eosfile ~= "none" then
-      local tabeos = require 'tabeos'
-      tabeos.MakeNeutronStarUnits()
-      tabeos.LoadMicroPh(RunArgs.eosfile)
+   util.run_simulation(tests.Explosion:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
+function ProblemList.ImplosionProblem()
+   RunArgs.fluid = "euler"
+   RunArgs.boundary = {"reflect2d", 2, 3}
+   util.run_simulation(tests[RunArgs.ic]:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
+function ProblemList.VanillaShocktube()
+   local problem = tests[RunArgs.ic]
+   if not problem then
+      error("ic="..RunArgs.ic.." does not exist")
    end
-
-   local Dl = 2.0
-   local Dr = 1.0
-   local Tl = 8.0 -- MeV
-   local Tr = 2.0 -- MeV
-   local prel = eos.Pressure(Dl, Tl)
-   local prer = eos.Pressure(Dr, Tr)
-
-   local ShocktubeEos = {
-      Pl = { Dl, prel, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 },
-      Pr = { Dr, prer, 0.000, 0.0, 0.0, 0.0, 0.0, 0.0 } }
-
-   local function pinit(x,y,z)
-      if x < 0.5 then
-         return ShocktubeEos.Pl
-      else
-         return ShocktubeEos.Pr
-      end
-   end
-
-   util.run_simulation(pinit, setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre*1000}
-   end
+   util.run_simulation(tests[RunArgs.ic]:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
+function ProblemList.VanillaExplosion()
+   util.run_simulation(tests.Explosion:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
+function ProblemList.VanillaKelvinHelmholtz()
+   RunArgs.dim = 2
+   util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
+end
+function ProblemList.VanillaDensityWave()
+   util.run_simulation(tests.DensityWave:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
+function ProblemList.VanillaIsentropicPulse()
+   util.run_simulation(tests.IsentropicPulse:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
 end
 
-----------------------------------------------------------
-local function RmhdExplosion()
-   RunArgs.fluid   = "rmhd"
-   RunArgs.riemann = "hlld"
-   RunArgs.advance = "single"
-   RunArgs.godunov = "plm-muscl"
-   RunArgs.boundary = "outflow"
-   util.run_simulation(tests.Explosion:get_pinit(), setup , RunArgs)
 
-   local P = get_prim()
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
+-- -----------------------------------------------------------------------------
+-- Some shortcuts
+-- -----------------------------------------------------------------------------
+ProblemList["mhdexpl"] = ProblemList["RmhdExplosion"]
+ProblemList["implode"] = ProblemList["ImplosionProblem"]
+ProblemList["denswave"] = ProblemList["VanillaDensityWave"]
+ProblemList["isenwave"] = ProblemList["VanillaIsentropicPulse"]
+ProblemList["kh"] = ProblemList["VanillaKelvinHelmholtz"]
+ProblemList["shocktube"] = ProblemList["VanillaShocktube"]
 
-----------------------------------------------------------
-local function VanillaShocktube()
-
-   local problem = tests.MakeShocktubeProblem(tests[RunArgs.ic], {reverse=false})
-   util.run_simulation(problem:get_pinit(), setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
-----------------------------------------------------------
-local function VanillaExplosion()
-   util.run_simulation(tests.Explosion:get_pinit(), setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
-----------------------------------------------------------
-local function VanillaKelvinHelmoltz()
-   util.run_simulation(tests.KelvinHelmoltz:get_pinit(), setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
-----------------------------------------------------------
-local function VanillaDensityWave()
-   util.run_simulation(tests.DensityWave:get_pinit(), setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
-----------------------------------------------------------
-local function VanillaIsentropicPulse()
-   util.run_simulation(tests.IsentropicPulse:get_pinit(), setup , RunArgs)
-   local P = get_prim()
-
-   if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
-   end
-end
-----------------------------------------------------------
-
-if RunArgs.problem == "defaultshocktube" then
-   VanillaShocktube()
-elseif RunArgs.problem == "explosion" then
-   VanillaExplosion()
-elseif RunArgs.problem == "kelvinhelmoltz" then
-   VanillaKelvinHelmoltz()
-elseif RunArgs.problem == "densitywave" then
-   VanillaDensityWave()
-elseif RunArgs.problem == "isentropicpulse" then
-   VanillaIsentropicPulse()
-elseif RunArgs.problem == "IsentropicConvergence" then
-   IsentopicConvergenceRate()
-elseif RunArgs.problem == "DensityWaveConvergence" then
-   DensityWaveConvergenceRate()
-elseif RunArgs.problem == "CompareEosRmhd" then
-   CompareEosRmhd()
-elseif RunArgs.problem == "rmhdexplosion" then
-   RmhdExplosion()
+local prob_to_run = ProblemList[RunArgs.problem]
+if not prob_to_run then
+   error("problem="..RunArgs.problem.." not found")
 else
-   print("Error: No such problem")
+   prob_to_run()
 end
