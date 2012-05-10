@@ -114,7 +114,6 @@ local function JacobianToro(U, n) -- n must be {1,0,0}
                { g1*H - u^2 - a2, g1, (3-gm)*u, -g1*v, -g1*w },
                { -u*v, 0, v, u, 0 },
                { -u*w, 0, w, 0, u } }
-
    return matrix(A)
 end
 
