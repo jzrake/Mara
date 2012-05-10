@@ -60,7 +60,7 @@ local function DensityWaveConvergenceRate()
 
    for run_num,N in pairs(res_values) do
       local function setup()
-	 set_domain({0.0}, {1.0}, {N}, 5, 7)
+	 set_domain({0.0}, {1.0}, {N}, 5, 3)
 	 set_fluid("euler")
 	 set_boundary("periodic")
 	 set_riemann("hllc")
@@ -69,6 +69,7 @@ local function DensityWaveConvergenceRate()
 	 set_advance("rk4")
 --	 set_godunov("weno-riemann")
 	 set_godunov("weno-split")
+	 set_reconstruct("weno5")
 	 set_eos("gamma-law", 1.4)
       end
 
@@ -142,5 +143,5 @@ end
 
 
 --IsentopicConvergenceRate()
---DensityWaveConvergenceRate()
-DensityWaveConvergenceRate2d()
+DensityWaveConvergenceRate()
+--DensityWaveConvergenceRate2d()
