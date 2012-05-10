@@ -1,3 +1,5 @@
+
+
 local json = require 'json'
 local host = require 'host'
 local util = require 'util'
@@ -7,18 +9,18 @@ local RunArgs = {
    N         = 64,
    dim       = 1,
    id        = "test",
-   ic        = "Shocktube1", -- name of test problem
    CFL       = 0.6,
+   fixdt     = false,        -- value for uniform time stepping
    tmax      = 0.2,
    noplot    = false,
-   eosfile   = "none", -- tabeos.h5
+   eosfile   = "none",       -- a tabulated equation of state tabeos.h5
    fluid     = "euler",
    bound     = "outflow",
    advance   = "rk4",
    riemann   = "hllc",
    godunov   = "weno-split",
 
-   cpi = -1.0, -- interval between writing checkpoint files (cpi < 0 => none)
+   cpi = -1.0, -- interval between checkpoints (cpi < 0 => none)
 
    -- --------------------------------------------------------------------------
    -- flags sent to config_solver
@@ -33,8 +35,9 @@ local RunArgs = {
    -- flags for particular initial conditions setups
    -- --------------------------------------------------------------------------
    eos       = "gamma-law",
-   adgam     = 1.4,
+   adgam     = 1.4,          -- adiabatic index if using gamma-law EOS
    quiet     = false,
+   ic        = "Shocktube1", -- name of test a problem
    problem   = "shocktube",
    pltvar    = "rho,pre,vx,vy,vz",
    angle     = "{1,0,0}",
@@ -51,7 +54,7 @@ local function plot_prim()
    if not RunArgs.noplot then
       local P = get_prim()
       local pltdict =  { }
-      for k,v in pairs(util.string_split(RunArgs.plotvars, ",")) do
+      for k,v in pairs(util.string_split(RunArgs.pltvar, ",")) do
 	 pltdict[v] = P[v]
       end
       if RunArgs.dim == 1 then
