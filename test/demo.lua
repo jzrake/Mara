@@ -8,7 +8,7 @@ local RunArgs = {
    dim         = 1,
    id          = "test",
    CFL         = 0.5,
-   tmax        = 0.4,
+   tmax        = 0.2,
    noplot      = false,
    eosfile     = "none", -- tabeos.h5
    fluid       = "euler",
@@ -142,6 +142,7 @@ local function CompareEosRmhd()
    RunArgs.riemann = "hlld"
    RunArgs.advance = "single"
    RunArgs.godunov = "plm-muscl"
+   RunArgs.boundary = "outflow"
 
    if RunArgs.eosfile ~= "none" then
       local tabeos = require 'tabeos'
@@ -175,10 +176,26 @@ local function CompareEosRmhd()
       util.plot{rho=P.rho, pre=P.pre*1000}
    end
 end
+
+----------------------------------------------------------
+local function RmhdExplosion()
+   RunArgs.fluid   = "rmhd"
+   RunArgs.riemann = "hlld"
+   RunArgs.advance = "single"
+   RunArgs.godunov = "plm-muscl"
+   RunArgs.boundary = "outflow"
+   util.run_simulation(tests.RmhdExplosion:get_pinit(), setup , RunArgs)
+
+   local P = get_prim()
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+
 ----------------------------------------------------------
 local function VanillaShocktube()
 
-   local problem = tests.MakeShocktubeProblem(tests.Shocktube1, {reverse=false})
+   local problem = tests.MakeShocktubeProblem(tests.ContactWave, {reverse=false})
    util.run_simulation(problem:get_pinit(), setup , RunArgs)
 
    local P = get_prim()
@@ -242,6 +259,8 @@ elseif RunArgs.problem == "Explosion2d" then
    Explosion2d()
 elseif RunArgs.problem == "CompareEosRmhd" then
    CompareEosRmhd()
+elseif RunArgs.problem == "rmhdexplosion" then
+   RmhdExplosion()
 else
    print("Error: No such problem")
 end
