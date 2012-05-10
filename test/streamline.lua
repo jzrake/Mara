@@ -1,5 +1,3 @@
-
-
 local Nzone = 16
 
 set_fluid("euler")
@@ -22,7 +20,6 @@ for i=0,Ntime do
    set_boundary("outflow")
    boundary.ApplyBoundaries()
    local S = streamline({0.1, 0.1, 0.0}, 6.6, 1e-2, "velocity")
-
    visual.draw_lines3d(S)
    collectgarbage()
 end

@@ -4,23 +4,25 @@ local util = require 'util'
 local tests = require 'tests'
 
 local RunArgs = {
-   N           = 128,
+   N           = 64,
    dim         = 1,
    id          = "test",
-   CFL         = 0.8,
+   CFL         = 0.5,
    tmax        = 0.4,
    noplot      = false,
    eosfile     = "none", -- tabeos.h5
    fluid       = "euler",
-   boundary    = "outflow",
+   boundary    = "periodic",
    advance     = "rk4",
    riemann     = "hllc",
    godunov     = "weno-split",
    reconstruct = "weno5",
    eos         = "gamma-law",
    adgam       = 1.4,
-   interactive = false,
-   quiet       = false
+   vis         = "default",
+   quiet       = false,
+   problem     = "defaultshocktube", 
+   interactive = false
 }
 
 for k,v in pairs(cmdline.opts) do
@@ -31,90 +33,21 @@ for k,v in pairs(cmdline.opts) do
    end
 end
 
+if RunArgs.dim ~= 1 and RunArgs.vis == "default" then 
+   RunArgs.interactive = true
+elseif RunArgs.dim == 1 and RunArgs.vis == "default" then 
+   RunArgs.interactive = false 
+elseif RunArgs.vis == "false" then 
+   RunArgs.interactive = false
+elseif RunArgs.vis == "true" then 
+   RunArgs.interactive = true
+else print("vis must equal 'false' or 'true'")
+end
+
 
 local function HandleErrors(Status, attempt)
    return 0
 end
-
-local Euler1dProblems = {
-
-   Shocktube1 = {
-      Pl = { 1.000, 1.000, 0.000, 0.0, 0.0 },
-      Pr = { 0.125, 0.100, 0.000, 0.0, 0.0 } },
-
-   Shocktube2 = {
-      Pl = { 1.000, 0.400,-2.000, 0.0, 0.0 },
-      Pr = { 1.000, 0.400, 2.000, 0.0, 0.0 } },
-
-   Shocktube3 = {
-      Pl = { 1.0, 1e+3, 0.0, 0.0, 0.0 },
-      Pr = { 1.0, 1e-2, 0.0, 0.0, 0.0 } },
-
-   Shocktube4 = {
-      Pl = { 1.0, 1e-2, 0.0, 0.0, 0.0 },
-      Pr = { 1.0, 1e+2, 0.0, 0.0, 0.0 } },
-
-   Shocktube5 = {
-      Pl = { 5.99924, 460.894, 19.59750, 0.0, 0.0 },
-      Pr = { 5.99924,  46.095, -6.19633, 0.0, 0.0 } },
-
-   ContactWave = {
-      Pl = { 1.0, 1.0, 0.0, 0.7, 0.2 },
-      Pr = { 0.1, 1.0, 0.0, 0.7, 0.2 }
-   },
-
-   IsentropicPulse = {
-      pinit = function(x,y,z)
-                 local n = 4
-                 local L = 1.0
-                 local K = 0.1
-                 local Gamma = 1.4
-                 local rho_ref = 1.0
-                 local pre_ref = K * rho_ref ^ Gamma
-                 local cs_ref = (Gamma * pre_ref / rho_ref)^0.5
-
-                 local function f(x)
-                    return math.sin(n*math.pi*x/L)^2
-                 end
-
-                 local rho = rho_ref * (1.0 + f(x))
-                 local pre = K * rho ^ Gamma
-                 local cs = (Gamma * pre/rho)^0.5
-                 local vx = 2 / (Gamma - 1) * (cs - cs_ref)
-                 return { rho, pre, vx, 0, 0 }
-              end,
-      entropy = 0.1 -- set equal to K above
-   }
-}
-
-local Rmhd1dProblems = {
-
-   Shocktube1 = {
-      Pl = { 1.000, 1.000, 0.000, 0.0, 0.0, 0.5, 1.0, 0.0 },
-      Pr = { 0.125, 0.100, 0.000, 0.0, 0.0, 0.5,-1.0, 0.0 } },
-
-   Shocktube2 = {
-      Pl = { 1.080, 0.950, 0.400, 0.3, 0.2, 2.0, 0.3, 0.3 },
-      Pr = { 1.000, 1.000,-0.450,-0.2, 0.2, 2.5,-0.7, 0.5 } },
-
-   Shocktube3 = {
-      Pl = { 1.000, 0.100, 0.999, 0.0, 0.0, 10.0, 0.7, 0.7 },
-      Pr = { 1.000, 0.100,-0.999, 0.0, 0.0, 10.0,-0.7,-0.7 } },
-
-   Shocktube4 = {
-      Pl = { 1.000, 5.000, 0.000, 0.3, 0.4, 1.0, 6.0, 2.0 },
-      Pr = { 0.900, 5.300, 0.000, 0.0, 0.0, 1.0, 5.0, 2.0 } },
-
-   ContactWave = {
-      Pl = { 10.0, 1.0, 0.0, 0.7, 0.2, 5.0, 1.0, 0.5 },
-      Pr = {  1.0, 1.0, 0.0, 0.7, 0.2, 5.0, 1.0, 0.5 }
-   },
-
-   RotationalWave = {
-      Pl = { 1, 1, 0.400000, -0.300000, 0.500000, 2.4, 1.00,-1.600000 },
-      Pr = { 1, 1, 0.377347, -0.482389, 0.424190, 2.4,-0.10,-2.178213 }
-   },
-}
 
 local function setup()
    local N = RunArgs.N
@@ -138,39 +71,73 @@ local function setup()
    set_eos(RunArgs.eos,RunArgs.adgam)
 end
 
-local function CompareWenoEuler()
 
-   local problem = tests.MakeShocktubeProblem(Euler1dProblems.Shocktube1, {reverse=false})
-   util.run_simulation(problem:get_pinit(), setup , RunArgs)
 
-   local P = get_prim()
 
-   if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
-   end
-end
+----------------------------------------------------------
+local function DensityWaveConvergenceRate()
+   local outf = io.open("densitywave.dat", "w")
 
-local function IsentopicConvergenceRate()
-
-   RunArgs.boundary = "periodic"
-
-   util.run_simulation(Euler1dProblems.IsentropicPulse.pinit, setup , RunArgs)
-
-   local P = get_prim()
-   if RunArgs.noplot ~= '1' then
-      util.plot{rho=P.rho}
+   if RunArgs.dim == 1 then 
+      local res_values = { 64, 128, 256, 512, 1024 }
+   else 
+      local res_values = { 16, 32, 64, 128} 
    end
 
-   if false then
-      local fout = io.open("rho.dat", "w")
-      for i=0,RunArgs.N-1 do
-	 fout:write(P.rho[i].."\n")
+   for run_num,N in pairs(res_values) do
+      RunArgs.N = N
+      local problem = tests.DensityWave
+      problem.eps = 3.2e-1
+
+      problem.velocity = { 0.1, 0.0, 0.0 }
+      
+      local status = util.run_simulation(problem:get_pinit(), setup, RunArgs)
+      local P_comp = get_prim()
+
+      init_prim(problem:get_pinit(status.CurrentTime))
+
+      local P_true = get_prim()
+      local diff = P_comp.rho - P_true.rho
+
+      local L1 = 0.0
+      for i=0,diff:size()-1 do
+	 L1 = L1 + math.abs(diff[i]) / N
       end
+
+      print("L1 = " .. math.log10(L1))
+      outf:write(N .. " " .. L1 .. "\n")
    end
 end
+----------------------------------------------------------
+local function IsentopicConvergenceRate()
+   local outf = io.open("isentropic.dat", "w")
 
+   if RunArgs.dim == 1 then 
+      local res_values = { 64, 128, 256, 512, 1024 }
+   else 
+      local res_values = { 16, 32, 64, 128} 
+   end
+
+   for run_num,N in pairs(res_values) do
+      RunArgs.N = N
+      local problem = tests.IsentropicPulse
+      problem.mode = 2
+      util.run_simulation(problem:get_pinit(), setup, RunArgs)
+      
+      local P = get_prim()
+      local dS = problem:entropy(P.rho, P.pre) - problem.entropy_ref
+
+      local L1 = 0.0
+      for i=0,dS:size()-1 do
+	 L1 = L1 + math.abs(dS[i]) / N
+      end
+
+      print("L1 = " .. math.log10(L1))
+      outf:write(N .. " " .. L1 .. "\n")
+   end
+end
+----------------------------------------------------------
 local function CompareEosRmhd()
-
    RunArgs.fluid   = "rmhd"
    RunArgs.riemann = "hlld"
    RunArgs.advance = "single"
@@ -207,16 +174,74 @@ local function CompareEosRmhd()
    if RunArgs.noplot ~= '1' then
       util.plot{rho=P.rho, pre=P.pre*1000}
    end
-
 end
+----------------------------------------------------------
+local function VanillaShocktube()
 
-local function Explosion2d()
-   RunArgs.interactive = true
-   RunArgs.dim = 2
+   local problem = tests.MakeShocktubeProblem(tests.Shocktube1, {reverse=false})
+   util.run_simulation(problem:get_pinit(), setup , RunArgs)
+
+   local P = get_prim()
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+----------------------------------------------------------
+local function VanillaExplosion()
    util.run_simulation(tests.Explosion:get_pinit(), setup , RunArgs)
-end
 
---Explosion2d()
---CompareEosRmhd()
---CompareWenoEuler()
---IsentopicConvergenceRate()
+   local P = get_prim()
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+----------------------------------------------------------
+local function VanillaKelvinHelmoltz()
+   util.run_simulation(tests.KelvinHelmoltz:get_pinit(), setup , RunArgs)
+
+   local P = get_prim()
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+----------------------------------------------------------
+local function VanillaDensityWave()
+   util.run_simulation(tests.DensityWave:get_pinit(), setup , RunArgs)
+
+   local P = get_prim()
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+----------------------------------------------------------
+local function VanillaIsentropicPulse()
+   util.run_simulation(tests.IsentropicPulse:get_pinit(), setup , RunArgs)
+   local P = get_prim()
+
+   if RunArgs.dim == 1 then
+      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+   end
+end
+----------------------------------------------------------
+
+if RunArgs.problem == "defaultshocktube" then
+   VanillaShocktube()
+elseif RunArgs.problem == "explosion" then
+   VanillaExplosion()
+elseif RunArgs.problem == "kelvinhelmoltz" then
+   VanillaKelvinHelmoltz()
+elseif RunArgs.problem == "densitywave" then
+   VanillaDensityWave()
+elseif RunArgs.problem == "isentropicpulse" then
+   VanillaIsentropicPulse()
+elseif RunArgs.problem == "IsentropicConvergence" then
+   IsentopicConvergenceRate()
+elseif RunArgs.problem == "DensityWaveConvergence" then
+   DensityWaveConvergenceRate()
+elseif RunArgs.problem == "Explosion2d" then
+   Explosion2d()
+elseif RunArgs.problem == "CompareEosRmhd" then
+   CompareEosRmhd()
+else
+   print("Error: No such problem")
+end
