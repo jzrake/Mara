@@ -13,10 +13,12 @@ local RunArgs = {
    noplot    = false,
    eosfile   = "none", -- tabeos.h5
    fluid     = "euler",
-   boundary  = "outflow",
+   bound     = "outflow",
    advance   = "rk4",
    riemann   = "hllc",
    godunov   = "weno-split",
+
+   cpi = -1.0, -- interval between writing checkpoint files (cpi < 0 => none)
 
    -- --------------------------------------------------------------------------
    -- flags sent to config_solver
@@ -34,7 +36,7 @@ local RunArgs = {
    adgam     = 1.4,
    quiet     = false,
    problem   = "shocktube",
-   plotvars  = "rho,pre,vx,vy,vz",
+   pltvar    = "rho,pre,vx,vy,vz",
    angle     = "{1,0,0}",
 }
 util.parse_args(RunArgs)
@@ -73,10 +75,10 @@ local function cfg_mara()
       error("Invalid Dimension")
    end
    
-   if type(RunArgs.boundary) == "string" then
-      set_boundary(RunArgs.boundary)
-   elseif type(RunArgs.boundary) == "table" then
-      set_boundary(unpack(RunArgs.boundary))
+   if type(RunArgs.bound) == "string" then
+      set_boundary(RunArgs.bound)
+   elseif type(RunArgs.bound) == "table" then
+      set_boundary(unpack(RunArgs.bound))
    end
    config_solver(RunArgs)
    set_fluid(RunArgs.fluid)
@@ -91,7 +93,7 @@ local ProblemList = { }
 
 function ProblemList.DensityWaveConvergenceRate()
    local outf = io.open("densitywave.dat", "w")
-   RunArgs.boundary = "periodic"
+   RunArgs.bound = "periodic"
 
    if RunArgs.dim == 1 then
       local res_values = { 64, 128, 256, 512, 1024 }
@@ -127,7 +129,7 @@ end
 
 function ProblemList.IsentopicConvergenceRate()
    local outf = io.open("isentropic.dat", "w")
-   RunArgs.boundary = "periodic"
+   RunArgs.bound = "periodic"
 
    if RunArgs.dim == 1 then
       local res_values = { 64, 128, 256, 512, 1024 }
@@ -166,7 +168,7 @@ function ProblemList.RmhdExplosion()
 end
 function ProblemList.ImplosionProblem()
    RunArgs.fluid = "euler"
-   RunArgs.boundary = {"reflect2d", 2, 3}
+   RunArgs.bound = {"reflect2d", 2, 3}
    util.run_simulation(tests[RunArgs.ic]:get_pinit(), cfg_mara , RunArgs)
    if RunArgs.dim == 1 then plot_prim() end
 end
