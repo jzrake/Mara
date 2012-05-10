@@ -7,12 +7,13 @@ local RunArgs = {
    N           = 64,
    dim         = 1,
    id          = "test",
+   ic          = "Shocktube1", -- name of test problem
    CFL         = 0.5,
    tmax        = 0.2,
    noplot      = false,
    eosfile     = "none", -- tabeos.h5
    fluid       = "euler",
-   boundary    = "periodic",
+   boundary    = "outflow",
    advance     = "rk4",
    riemann     = "hllc",
    godunov     = "weno-split",
@@ -21,7 +22,7 @@ local RunArgs = {
    adgam       = 1.4,
    vis         = "default",
    quiet       = false,
-   problem     = "defaultshocktube", 
+   problem     = "defaultshocktube",
    interactive = false
 }
 
@@ -33,13 +34,13 @@ for k,v in pairs(cmdline.opts) do
    end
 end
 
-if RunArgs.dim ~= 1 and RunArgs.vis == "default" then 
+if RunArgs.dim ~= 1 and RunArgs.vis == "default" then
    RunArgs.interactive = true
-elseif RunArgs.dim == 1 and RunArgs.vis == "default" then 
-   RunArgs.interactive = false 
-elseif RunArgs.vis == "false" then 
+elseif RunArgs.dim == 1 and RunArgs.vis == "default" then
    RunArgs.interactive = false
-elseif RunArgs.vis == "true" then 
+elseif RunArgs.vis == "false" then
+   RunArgs.interactive = false
+elseif RunArgs.vis == "true" then
    RunArgs.interactive = true
 else print("vis must equal 'false' or 'true'")
 end
@@ -54,11 +55,14 @@ local function setup()
    local NumberOfConserved = { rmhd=8, srhd=5, euler=5 }
 
    if RunArgs.dim == 1 then
-      set_domain({0.0}, {1.0}, {N}, NumberOfConserved[RunArgs.fluid], 3)
+      set_domain({0.0}, {1.0}, {N},
+                 NumberOfConserved[RunArgs.fluid], 3)
    elseif RunArgs.dim == 2 then
-      set_domain({-0.5, -0.5}, {0.5, 0.5}, {N,N}, NumberOfConserved[RunArgs.fluid], 3)
+      set_domain({-0.5, -0.5}, {0.5, 0.5}, {N,N},
+                 NumberOfConserved[RunArgs.fluid], 3)
    elseif RunArgs.dim == 3 then
-      set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {N,N,N}, NumberOfConserved[RunArgs.fluid], 3)
+      set_domain({-0.5, -0.5, -0.5}, {0.5, 0.5, 0.5}, {N,N,N},
+                 NumberOfConserved[RunArgs.fluid], 3)
    else print("Invalid Dimension")
    end
 
@@ -77,11 +81,12 @@ end
 ----------------------------------------------------------
 local function DensityWaveConvergenceRate()
    local outf = io.open("densitywave.dat", "w")
+   RunArgs.boundary = "periodic"
 
-   if RunArgs.dim == 1 then 
+   if RunArgs.dim == 1 then
       local res_values = { 64, 128, 256, 512, 1024 }
-   else 
-      local res_values = { 16, 32, 64, 128} 
+   else
+      local res_values = { 16, 32, 64, 128}
    end
 
    for run_num,N in pairs(res_values) do
@@ -90,7 +95,7 @@ local function DensityWaveConvergenceRate()
       problem.eps = 3.2e-1
 
       problem.velocity = { 0.1, 0.0, 0.0 }
-      
+
       local status = util.run_simulation(problem:get_pinit(), setup, RunArgs)
       local P_comp = get_prim()
 
@@ -101,7 +106,7 @@ local function DensityWaveConvergenceRate()
 
       local L1 = 0.0
       for i=0,diff:size()-1 do
-	 L1 = L1 + math.abs(diff[i]) / N
+         L1 = L1 + math.abs(diff[i]) / N
       end
 
       print("L1 = " .. math.log10(L1))
@@ -111,11 +116,12 @@ end
 ----------------------------------------------------------
 local function IsentopicConvergenceRate()
    local outf = io.open("isentropic.dat", "w")
+   RunArgs.boundary = "periodic"
 
-   if RunArgs.dim == 1 then 
+   if RunArgs.dim == 1 then
       local res_values = { 64, 128, 256, 512, 1024 }
-   else 
-      local res_values = { 16, 32, 64, 128} 
+   else
+      local res_values = { 16, 32, 64, 128}
    end
 
    for run_num,N in pairs(res_values) do
@@ -123,13 +129,13 @@ local function IsentopicConvergenceRate()
       local problem = tests.IsentropicPulse
       problem.mode = 2
       util.run_simulation(problem:get_pinit(), setup, RunArgs)
-      
+
       local P = get_prim()
       local dS = problem:entropy(P.rho, P.pre) - problem.entropy_ref
 
       local L1 = 0.0
       for i=0,dS:size()-1 do
-	 L1 = L1 + math.abs(dS[i]) / N
+         L1 = L1 + math.abs(dS[i]) / N
       end
 
       print("L1 = " .. math.log10(L1))
@@ -184,23 +190,23 @@ local function RmhdExplosion()
    RunArgs.advance = "single"
    RunArgs.godunov = "plm-muscl"
    RunArgs.boundary = "outflow"
-   util.run_simulation(tests.RmhdExplosion:get_pinit(), setup , RunArgs)
+   util.run_simulation(tests.Explosion:get_pinit(), setup , RunArgs)
 
    local P = get_prim()
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 
 ----------------------------------------------------------
 local function VanillaShocktube()
 
-   local problem = tests.MakeShocktubeProblem(tests.ContactWave, {reverse=false})
+   local problem = tests.MakeShocktubeProblem(tests[RunArgs.ic], {reverse=false})
    util.run_simulation(problem:get_pinit(), setup , RunArgs)
 
    local P = get_prim()
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 ----------------------------------------------------------
@@ -209,7 +215,7 @@ local function VanillaExplosion()
 
    local P = get_prim()
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 ----------------------------------------------------------
@@ -218,7 +224,7 @@ local function VanillaKelvinHelmoltz()
 
    local P = get_prim()
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 ----------------------------------------------------------
@@ -227,7 +233,7 @@ local function VanillaDensityWave()
 
    local P = get_prim()
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 ----------------------------------------------------------
@@ -236,7 +242,7 @@ local function VanillaIsentropicPulse()
    local P = get_prim()
 
    if RunArgs.dim == 1 then
-      util.plot{rho=P.rho, pre=P.pre, vy=P.vy, vz=P.vz}
+      util.plot{rho=P.rho, pre=P.pre, vx=P.vx, vy=P.vy, vz=P.vz}
    end
 end
 ----------------------------------------------------------
@@ -255,8 +261,6 @@ elseif RunArgs.problem == "IsentropicConvergence" then
    IsentopicConvergenceRate()
 elseif RunArgs.problem == "DensityWaveConvergence" then
    DensityWaveConvergenceRate()
-elseif RunArgs.problem == "Explosion2d" then
-   Explosion2d()
 elseif RunArgs.problem == "CompareEosRmhd" then
    CompareEosRmhd()
 elseif RunArgs.problem == "rmhdexplosion" then
