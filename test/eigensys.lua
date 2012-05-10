@@ -1,7 +1,8 @@
 
 
-
 local matrix = require 'matrix'
+local util = require 'util'
+
 local sep = "---------------------------------"
 local function clip(x)
    if math.abs(x) < 1e-12 then
@@ -119,9 +120,39 @@ local function TestState(P, dim)
    print("\nL.A.R (expect eigenvalues):")
    print(sep)
    print((L*A*R):replace(clip))
+
+   print(sep)
+   print(L)
 end
 
+local function compute_sr_jacobian(P)
+   set_fluid("srhd")
 
+   local eps = 1e-10
+   local U = fluid.PrimToCons(lunum.array(P))
+   local J = lunum.zeros{5,5}
 
-local P = { 1, 2, 0.5, 0.5, 0.5 }
-TestState(P, 1)
+   for i=0,5-1 do
+      for j=0,5-1 do
+
+	 local U0 = U:copy()
+	 local U1 = U:copy()
+
+	 U0[j] = U0[j] - eps
+	 U1[j] = U1[j] + eps
+
+	 local P0 = fluid.ConsToPrim(U0)
+	 local P1 = fluid.ConsToPrim(U)
+
+	 F0 = fluid.FluxFunction(P0, 1)
+	 F1 = fluid.FluxFunction(P1, 1)
+
+	 J[{i,j}] = (F1[i] - F0[i]) / (U1[j] - U0[j])
+      end
+   end
+   return J
+end
+
+local P = { 1, 2, 0.1, 0.1, 0.1 }
+print(compute_sr_jacobian(P))
+--TestState(P, 1)
