@@ -88,7 +88,7 @@ local function cfg_mara()
    elseif type(RunArgs.bound) == "table" then
       set_boundary(unpack(RunArgs.bound))
    end
-   config_solver(RunArgs)
+   config_solver(RunArgs, RunArgs.quiet)
    set_fluid(RunArgs.fluid)
    set_advance(RunArgs.advance)
    set_riemann(RunArgs.riemann)
@@ -100,16 +100,20 @@ end
 local ProblemList = { }
 
 function ProblemList.DensityWaveConvergenceRate()
-   local outf = io.open("densitywave.dat", "w")
    RunArgs.bound = "periodic"
+   local res_values
+   local L1_values = { }
 
    if RunArgs.dim == 1 then
-      local res_values = { 64, 128, 256, 512, 1024 }
+      res_values = { 64, 128, 256, 512, 1024 }
    else
-      local res_values = { 16, 32, 64, 128}
+      res_values = { 16, 32, 64, 128}
    end
 
-   for run_num,N in pairs(res_values) do
+   print("----------------------")
+   print("log10(L1)\t order")
+   print("----------------------")
+   for n,N in pairs(res_values) do
       RunArgs.N = N
       local problem = tests.DensityWave
       problem.eps = 3.2e-1
@@ -129,23 +133,31 @@ function ProblemList.DensityWaveConvergenceRate()
          L1 = L1 + math.abs(diff[i]) / N
       end
 
-      print("L1 = " .. math.log10(L1))
-      outf:write(N .. " " .. L1 .. "\n")
+      L1_values[n] = math.log10(L1)
+      local order = n == 1 and 0.0 or (
+	 (L1_values[n] - L1_values[n-1]) /
+	 (math.log10(res_values[n]) - math.log10(res_values[n-1])))
+
+      print(string.format("%+f\t %+f", math.log10(L1), order))
    end
 end
 
 
 function ProblemList.IsentopicConvergenceRate()
-   local outf = io.open("isentropic.dat", "w")
    RunArgs.bound = "periodic"
+   local res_values
+   local L1_values = { }
 
    if RunArgs.dim == 1 then
-      local res_values = { 64, 128, 256, 512, 1024 }
+      res_values = { 64, 128, 256, 512, 1024 }
    else
-      local res_values = { 16, 32, 64, 128}
+      res_values = { 16, 32, 64, 128}
    end
 
-   for run_num,N in pairs(res_values) do
+   print("----------------------")
+   print("log10(L1)\t order")
+   print("----------------------")
+   for n,N in pairs(res_values) do
       RunArgs.N = N
       local problem = tests.IsentropicPulse
       problem.mode = 2
@@ -159,8 +171,12 @@ function ProblemList.IsentopicConvergenceRate()
          L1 = L1 + math.abs(dS[i]) / N
       end
 
-      print("L1 = " .. math.log10(L1))
-      outf:write(N .. " " .. L1 .. "\n")
+      L1_values[n] = math.log10(L1)
+      local order = n == 1 and 0.0 or (
+	 (L1_values[n] - L1_values[n-1]) /
+	 (math.log10(res_values[n]) - math.log10(res_values[n-1])))
+
+      print(string.format("%+f\t %+f", math.log10(L1), order))
    end
 end
 
