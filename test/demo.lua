@@ -11,7 +11,7 @@ local RunArgs = {
    id        = "test",
    cpi       = -1.0,      -- interval between checkpoints (cpi < 0 => none)
    CFL       = 0.6,
-   fixdt     = false,     -- value for uniform time stepping
+   fixdt     = -1.0,      -- value for uniform time stepping
    tmax      = 0.2,       -- run simulation until
    eosfile   = "none",    -- a tabulated equation of state tabeos.h5
    fluid     = "euler",
