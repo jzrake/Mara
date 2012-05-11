@@ -37,14 +37,19 @@ local RunArgs = {
    quiet     = false,
    ic        = "Shocktube1", -- name of test a problem
    problem   = "shocktube",
-   angle     = "{1,0,0}",
-   noplot    = false,
+   angle     = "{1,0,0}",    -- normal used for shock tubes and implosion tests
+
+   -- --------------------------------------------------------------------------
+   -- inline plotting options
+   -- --------------------------------------------------------------------------
+   pdf       = false,        -- write 1d figure to a pdf file instead of window
+   noplot    = false,        -- suppress opening a plot window
    pltvar    = "rho,pre,vx,vy,vz",
 }
 math.randomseed(mpi_get_rank())
 util.parse_args(RunArgs)
+util.RunArgs = RunArgs
 tests.RunArgs = RunArgs
-
 
 local function HandleErrors(Status, attempt)
    return 0
