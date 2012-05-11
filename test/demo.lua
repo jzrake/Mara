@@ -185,6 +185,7 @@ function ProblemList.VanillaExplosion()
 end
 function ProblemList.VanillaKelvinHelmholtz()
    RunArgs.dim = 2
+   RunArgs.bound = "periodic"
    util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
 end
 function ProblemList.VanillaDensityWave()
