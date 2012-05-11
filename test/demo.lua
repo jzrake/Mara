@@ -41,6 +41,7 @@ local RunArgs = {
    noplot    = false,
    pltvar    = "rho,pre,vx,vy,vz",
 }
+math.randomseed(mpi_get_rank())
 util.parse_args(RunArgs)
 tests.RunArgs = RunArgs
 
