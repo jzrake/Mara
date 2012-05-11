@@ -9,18 +9,16 @@ local RunArgs = {
    N         = 64,
    dim       = 1,
    id        = "test",
+   cpi       = -1.0,      -- interval between checkpoints (cpi < 0 => none)
    CFL       = 0.6,
-   fixdt     = false,        -- value for uniform time stepping
-   tmax      = 0.2,
-   noplot    = false,
-   eosfile   = "none",       -- a tabulated equation of state tabeos.h5
+   fixdt     = false,     -- value for uniform time stepping
+   tmax      = 0.2,       -- run simulation until
+   eosfile   = "none",    -- a tabulated equation of state tabeos.h5
    fluid     = "euler",
    bound     = "outflow",
    advance   = "rk4",
    riemann   = "hllc",
    godunov   = "weno-split",
-
-   cpi = -1.0, -- interval between checkpoints (cpi < 0 => none)
 
    -- --------------------------------------------------------------------------
    -- flags sent to config_solver
@@ -39,8 +37,9 @@ local RunArgs = {
    quiet     = false,
    ic        = "Shocktube1", -- name of test a problem
    problem   = "shocktube",
-   pltvar    = "rho,pre,vx,vy,vz",
    angle     = "{1,0,0}",
+   noplot    = false,
+   pltvar    = "rho,pre,vx,vy,vz",
 }
 util.parse_args(RunArgs)
 tests.RunArgs = RunArgs
@@ -161,14 +160,6 @@ end
 
 
 
-function ProblemList.RmhdExplosion()
-   RunArgs.fluid   = "rmhd"
-   RunArgs.riemann = "hlld"
-   RunArgs.advance = "single"
-   RunArgs.godunov = "plm-muscl"
-   util.run_simulation(tests.Explosion:get_pinit(), cfg_mara , RunArgs)
-   if RunArgs.dim == 1 then plot_prim() end
-end
 function ProblemList.ImplosionProblem()
    RunArgs.fluid = "euler"
    RunArgs.bound = {"reflect2d", 2, 3}
@@ -184,6 +175,11 @@ function ProblemList.VanillaShocktube()
    if RunArgs.dim == 1 then plot_prim() end
 end
 function ProblemList.VanillaExplosion()
+   if RunArgs.fluid == "rmhd" then
+      RunArgs.riemann = "hlld"
+      RunArgs.advance = "single"
+      RunArgs.godunov = "plm-muscl"
+   end
    util.run_simulation(tests.Explosion:get_pinit(), cfg_mara , RunArgs)
    if RunArgs.dim == 1 then plot_prim() end
 end
@@ -204,7 +200,7 @@ end
 -- -----------------------------------------------------------------------------
 -- Some shortcuts
 -- -----------------------------------------------------------------------------
-ProblemList["mhdexpl"] = ProblemList["RmhdExplosion"]
+ProblemList["explode"] = ProblemList["VanillaExplosion"]
 ProblemList["implode"] = ProblemList["ImplosionProblem"]
 ProblemList["denswave"] = ProblemList["VanillaDensityWave"]
 ProblemList["isenwave"] = ProblemList["VanillaIsentropicPulse"]
