@@ -210,6 +210,11 @@ function ProblemList.VanillaKelvinHelmholtz()
    RunArgs.bound = "periodic"
    util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
 end
+function ProblemList.SmoothKelvinHelmholtz()
+   RunArgs.dim = 2
+   RunArgs.bound = "periodic"
+   util.run_simulation(tests.SmoothKelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
+end
 function ProblemList.VanillaDensityWave()
    util.run_simulation(tests.DensityWave:get_pinit(), cfg_mara , RunArgs)
    if RunArgs.dim == 1 then plot_prim() end
