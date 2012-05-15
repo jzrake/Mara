@@ -110,9 +110,9 @@ function ProblemList.DensityWaveConvergenceRate()
       res_values = { 16, 32, 64, 128}
    end
 
-   print("----------------------")
-   print("log10(L1)\t order")
-   print("----------------------")
+   print("------------------------------")
+   print("N\t log10(L1)\t order")
+   print("------------------------------")
    for n,N in pairs(res_values) do
       RunArgs.N = N
       local problem = tests.DensityWave
@@ -138,7 +138,7 @@ function ProblemList.DensityWaveConvergenceRate()
 	 (L1_values[n] - L1_values[n-1]) /
 	 (math.log10(res_values[n]) - math.log10(res_values[n-1])))
 
-      print(string.format("%+f\t %+f", math.log10(L1), order))
+      print(string.format("%d\t %+f\t %+f", N, math.log10(L1), order))
    end
 end
 
@@ -154,9 +154,9 @@ function ProblemList.IsentopicConvergenceRate()
       res_values = { 16, 32, 64, 128}
    end
 
-   print("----------------------")
-   print("log10(L1)\t order")
-   print("----------------------")
+   print("------------------------------")
+   print("N\t log10(L1)\t order")
+   print("------------------------------")
    for n,N in pairs(res_values) do
       RunArgs.N = N
       local problem = tests.IsentropicPulse
@@ -176,7 +176,7 @@ function ProblemList.IsentopicConvergenceRate()
 	 (L1_values[n] - L1_values[n-1]) /
 	 (math.log10(res_values[n]) - math.log10(res_values[n-1])))
 
-      print(string.format("%+f\t %+f", math.log10(L1), order))
+      print(string.format("%d\t %+f\t %+f", N, math.log10(L1), order))
    end
 end
 
