@@ -210,6 +210,14 @@ function ProblemList.VanillaKelvinHelmholtz()
    RunArgs.bound = "periodic"
    util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
 end
+function ProblemList.SingleLayerKelvinHelmholtz()
+   RunArgs.dim = 2
+   RunArgs.bound = "perxouty"
+   tests.KelvinHelmholtz.layer_pos = function(self, x, y, z)
+      return y < 0.0
+   end
+   util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
+end
 function ProblemList.SmoothKelvinHelmholtz()
    RunArgs.dim = 2
    RunArgs.bound = "periodic"
@@ -223,6 +231,10 @@ function ProblemList.VanillaIsentropicPulse()
    util.run_simulation(tests.IsentropicPulse:get_pinit(), cfg_mara , RunArgs)
    if RunArgs.dim == 1 then plot_prim() end
 end
+function ProblemList.TangentialVelocity()
+   util.run_simulation(tests.TangentialVelocity:get_pinit(), cfg_mara , RunArgs)
+   if RunArgs.dim == 1 then plot_prim() end
+end
 
 
 -- -----------------------------------------------------------------------------
@@ -233,6 +245,7 @@ ProblemList["implode"] = ProblemList["ImplosionProblem"]
 ProblemList["denswave"] = ProblemList["VanillaDensityWave"]
 ProblemList["isenwave"] = ProblemList["VanillaIsentropicPulse"]
 ProblemList["kh"] = ProblemList["VanillaKelvinHelmholtz"]
+ProblemList["kh1L"] = ProblemList["SingleLayerKelvinHelmholtz"]
 ProblemList["shocktube"] = ProblemList["VanillaShocktube"]
 
 local prob_to_run = ProblemList[RunArgs.problem]
