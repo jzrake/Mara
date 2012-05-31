@@ -51,6 +51,10 @@ util.parse_args(RunArgs)
 util.RunArgs = RunArgs
 tests.RunArgs = RunArgs
 
+-- This function may be used by problem setups if the domain is more complicated
+-- than square:
+local custom_domain = nil
+
 local function HandleErrors(Status, attempt)
    return 0
 end
@@ -73,7 +77,9 @@ local function cfg_mara()
    local NumberOfConserved = { rmhd=8, srhd=5, euler=5 }
    local Nq = NumberOfConserved[RunArgs.fluid]
 
-   if RunArgs.dim == 1 then
+   if custom_domain then
+      custom_domain(Nq, 3)
+   elseif RunArgs.dim == 1 then
       set_domain({0}, {1}, {N}, Nq, 3)
    elseif RunArgs.dim == 2 then
       set_domain({0,0}, {1,1}, {N,N}, Nq, 3)
@@ -213,6 +219,9 @@ end
 function ProblemList.SingleLayerKelvinHelmholtz()
    RunArgs.dim = 2
    RunArgs.bound = "perxouty"
+   custom_domain = function(Nq, Ng)
+      set_domain({0,0}, {2,1}, {2*RunArgs.N, RunArgs.N}, Nq, Ng)
+   end
    tests.KelvinHelmholtz.layer_pos = function(self, x, y, z)
       return y < 0.0
    end
