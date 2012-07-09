@@ -62,6 +62,15 @@ end
 local function plot_prim()
    if not RunArgs.noplot then
       local P = get_prim()
+      --[[
+      local pre = P.pre
+      local rho = P.rho
+      local W2 = 1.0 / (1.0 - (P.vx^2 + P.vy^2))
+      local e = (pre/rho) * 1.0/(RunArgs.adgam - 1.0)
+      local h = 1 + e + pre/rho
+      local sx = rho * h * W2 * P.vx
+      util.plot({sx=sx})
+       ]]--
       local pltdict =  { }
       for k,v in pairs(util.string_split(RunArgs.pltvar, ",")) do
 	 pltdict[v] = P[v]
@@ -214,16 +223,22 @@ end
 function ProblemList.VanillaKelvinHelmholtz()
    RunArgs.dim = 2
    RunArgs.bound = "periodic"
+   custom_domain = function(Nq, Ng)
+      set_domain({0,0}, {2,1}, {2*RunArgs.N, RunArgs.N}, Nq, Ng)
+   end
    util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
 end
 function ProblemList.SingleLayerKelvinHelmholtz()
    RunArgs.dim = 2
    RunArgs.bound = "perxouty"
-   custom_domain = function(Nq, Ng)
-      set_domain({0,0}, {2,1}, {2*RunArgs.N, RunArgs.N}, Nq, Ng)
+--   custom_domain = function(Nq, Ng)
+--      set_domain({0,0}, {2,1}, {2*RunArgs.N, RunArgs.N}, Nq, Ng)
+--   end
+   tests.KelvinHelmholtz.rho_profile = function(self, x, y, z)
+      return math.exp(math.abs(y/0.2))
    end
-   tests.KelvinHelmholtz.layer_pos = function(self, x, y, z)
-      return y < 0.0
+   tests.KelvinHelmholtz.vx_profile = function(self, x, y, z)
+      return y > 0.0 and -.5 or 0.5
    end
    util.run_simulation(tests.KelvinHelmholtz:get_pinit(), cfg_mara , RunArgs)
 end
